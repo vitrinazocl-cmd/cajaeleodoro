@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eleodoro El Grande Distribuidora - ERP & POS</title>
+  
+  <!-- SEO Técnico y Metadatos -->
+  <meta name="description" content="Sistema Integral ERP, Punto de Venta (POS) y Analítica de Negocio para Eleodoro El Grande Distribuidora de bebidas y licores.">
+  <meta name="theme-color" content="#E50914">
+  
+  <!-- Fuentes e Iconos Modernos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <!-- Chart.js para Reportería Ejecutiva y Business Intelligence -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Estilos Corporativos Premium -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       PANTALLA DE AUTENTICACIÓN (LOGIN GLASSMORPHISM)
+       ========================================== -->
+  <div id="login-container" class="login-view-active">
+    <div class="login-card">
+      <div class="login-logo-area">
+        <!-- SVG Corporativo Premium: Gorila con gafas de sol y corona (Eleodoro El Grande) -->
+        <svg class="logo-svg" viewBox="0 0 500 200" width="100%" height="80">
+          <defs>
+            <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#E50914" />
+              <stop offset="50%" stop-color="#FF007F" />
+              <stop offset="100%" stop-color="#0070F3" />
+            </linearGradient>
+          </defs>
+          <!-- Gorila con gafas de sol (SVG minimalista y moderno) -->
+          <g transform="translate(10, 0) scale(0.9)">
+            <!-- Corona de Eleodoro el Grande -->
+            <path d="M 60,30 L 75,50 L 100,25 L 125,50 L 140,30 L 130,70 L 70,70 Z" fill="#FFD700" stroke="#FF8C00" stroke-width="2"/>
+            <!-- Cabeza Gorila -->
+            <path d="M 50,90 Q 50,60 100,60 Q 150,60 150,90 Q 150,130 100,130 Q 50,130 50,90 Z" fill="#1C1C1E"/>
+            <path d="M 65,95 Q 65,80 100,80 Q 135,80 135,95 Q 135,115 100,115 Q 65,115 65,95 Z" fill="#2C2C2E"/>
+            <!-- Gafas de Sol con Degradado Corporativo -->
+            <rect x="70" y="82" width="28" height="18" rx="5" fill="url(#brand-grad)"/>
+            <rect x="102" y="82" width="28" height="18" rx="5" fill="url(#brand-grad)"/>
+            <line x1="98" y1="90" x2="102" y2="90" stroke="#E50914" stroke-width="3"/>
+            <!-- Detalle boca/sonrisa -->
+            <path d="M 85,108 Q 100,115 115,108" stroke="#FF007F" stroke-width="2" fill="none"/>
+          </g>
+          <!-- Texto Corporativo -->
+          <text x="210" y="85" fill="#FFFFFF" font-family="'Outfit', sans-serif" font-weight="900" font-size="28" letter-spacing="1">ELEODORO</text>
+          <text x="210" y="115" fill="#FF007F" font-family="'Outfit', sans-serif" font-weight="800" font-size="22" letter-spacing="1.5">EL GRANDE</text>
+          <text x="210" y="145" fill="#0070F3" font-family="'Outfit', sans-serif" font-weight="600" font-size="14" letter-spacing="4">DISTRIBUIDORA</text>
+        </svg>
+      </div>
+      <h2 class="login-title">Acceso Empresarial</h2>
+      <p class="login-subtitle">Introduce tus credenciales para ingresar al sistema ERP + POS</p>
+      
+      <form id="login-form">
+        <div class="input-group">
+          <span class="material-icons-round input-icon">person</span>
+          <input type="text" id="login-username" placeholder="Usuario" required autocomplete="username">
+          <label for="login-username">Usuario</label>
+        </div>
+        <div class="input-group">
+          <span class="material-icons-round input-icon">lock</span>
+          <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
+          <label for="login-password">Contraseña</label>
+        </div>
+        <div class="login-error-msg" id="login-error">Usuario o clave incorrectos.</div>
+        <button type="submit" class="btn-login">
+          <span>Ingresar Sistema</span>
+          <span class="material-icons-round">arrow_forward</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       APLICACIÓN PRINCIPAL (SIDEBAR + MAIN CONTENT)
+       ========================================== -->
+  <div id="app-container" class="app-view-hidden">
+    
+    <!-- BARRA LATERAL (SIDEBAR COLAPSABLE) -->
+    <aside id="app-sidebar" class="sidebar">
+      <div class="sidebar-brand">
+        <!-- Logo en barra lateral -->
+        <svg viewBox="0 0 500 200" width="100%" height="45">
+          <use href="#brand-grad"></use>
+          <g transform="translate(10, 0) scale(0.9)">
+            <path d="M 60,30 L 75,50 L 100,25 L 125,50 L 140,30 L 130,70 L 70,70 Z" fill="#FFD700" stroke="#FF8C00" stroke-width="2"/>
+            <path d="M 50,90 Q 50,60 100,60 Q 150,60 150,90 Q 150,130 100,130 Q 50,130 50,90 Z" fill="#FFFFFF"/>
+            <rect x="70" y="82" width="28" height="18" rx="5" fill="#E50914"/>
+            <rect x="102" y="82" width="28" height="18" rx="5" fill="#0070F3"/>
+          </g>
+          <text x="210" y="100" fill="#FFFFFF" font-family="'Outfit', sans-serif" font-weight="900" font-size="34">ELEODORO</text>
+          <text x="210" y="145" fill="#FF007F" font-family="'Outfit', sans-serif" font-weight="800" font-size="28">DISTRIBUIDORA</text>
+        </svg>
+        <button id="sidebar-toggle-btn" class="btn-icon">
+          <span class="material-icons-round">menu_open</span>
+        </button>
+      </div>
+
+      <!-- Menú de Navegación ERP / SAP-Style -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Operación Diaria</div>
+        <a href="#pos" class="nav-item active" id="nav-pos">
+          <span class="material-icons-round nav-icon">point_of_sale</span>
+          <span class="nav-label">Caja POS</span>
+        </a>
+        <a href="#erp-ventas" class="nav-item" id="nav-erp-ventas">
+          <span class="material-icons-round nav-icon">receipt_long</span>
+          <span class="nav-label">Venta / Cierre</span>
+        </a>
+        <a href="#erp-productos" class="nav-item" id="nav-erp-productos">
+          <span class="material-icons-round nav-icon">inventory_2</span>
+          <span class="nav-label">Inventario & Stock</span>
+        </a>
+
+        <div class="nav-section-title">Planificación y BI</div>
+        <a href="#bi-dashboard" class="nav-item" id="nav-bi-dashboard">
+          <span class="material-icons-round nav-icon">insights</span>
+          <span class="nav-label">Business Intelligence</span>
+        </a>
+        <a href="#erp-compras" class="nav-item" id="nav-erp-compras">
+          <span class="material-icons-round nav-icon">shopping_cart</span>
+          <span class="nav-label">Compras & OC</span>
+        </a>
+
+        <div class="nav-section-title">Contactos</div>
+        <a href="#erp-clientes" class="nav-item" id="nav-erp-clientes">
+          <span class="material-icons-round nav-icon">people_alt</span>
+          <span class="nav-label">Clientes</span>
+        </a>
+        <a href="#erp-proveedores" class="nav-item" id="nav-erp-proveedores">
+          <span class="material-icons-round nav-icon">local_shipping</span>
+          <span class="nav-label">Proveedores</span>
+        </a>
+
+        <div class="nav-section-title">Control Interno</div>
+        <a href="#admin-panel" class="nav-item" id="nav-admin-panel">
+          <span class="material-icons-round nav-icon">admin_panel_settings</span>
+          <span class="nav-label">Administrador</span>
+        </a>
+      </nav>
+
+      <!-- Perfil de usuario logueado en la parte inferior del sidebar -->
+      <div class="sidebar-footer">
+        <div class="user-profile-widget">
+          <div class="avatar">E</div>
+          <div class="user-info">
+            <span class="user-name" id="user-display-name">Eleodoro El Grande</span>
+            <span class="user-role" id="user-display-role">Administrador</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-icon" title="Cerrar Sesión">
+          <span class="material-icons-round">logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+      
+      <!-- NAV SUPERIOR (TÍTULO, ACCIONES RÁPIDAS Y TEMAS) -->
+      <header class="top-navbar">
+        <div class="navbar-left">
+          <h1 id="view-title" class="navbar-title">Caja Registradora (POS)</h1>
+          <span class="db-status-badge" id="db-mode-badge">SQLite</span>
+        </div>
+        
+        <div class="navbar-right">
+          <!-- Alertas de Stock Crítico -->
+          <div class="notification-bell-wrapper" id="stock-alerts-btn">
+            <span class="material-icons-round icon-btn">notifications</span>
+            <span class="badge badge-error hide" id="stock-alerts-count">0</span>
+          </div>
+          
+          <!-- Lector Offline Status -->
+          <div class="online-status-indicator" id="online-status-badge">
+            <span class="status-dot green"></span>
+            <span class="status-text">En línea</span>
+          </div>
+
+          <!-- Switch Modo Claro/Oscuro -->
+          <button id="theme-toggle-btn" class="btn-icon" title="Cambiar Tema">
+            <span class="material-icons-round">light_mode</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENEDOR DINÁMICO DE VISTAS (SPA) -->
+      <div id="views-container" class="views-wrapper">
+        
+        <!-- ==========================================
+             VISTA 1: CAJA REGISTRADORA (POS)
+             ========================================== -->
+        <section id="view-pos" class="app-view active-view">
+          <div class="pos-layout">
+            
+            <!-- Panel izquierdo: Catálogo, buscador y lector de barras -->
+            <div class="pos-main-panel">
+              <div class="search-bar-pos">
+                <div class="input-search-wrapper">
+                  <span class="material-icons-round">search</span>
+                  <input type="text" id="pos-search-input" placeholder="Buscar por Nombre, Marca, Categoría o SKU...">
+                </div>
+                <div class="scanner-mock-wrapper">
+                  <span class="material-icons-round">qr_code_scanner</span>
+                  <input type="text" id="pos-barcode-input" placeholder="Escanear Código Barras (Enter)">
+                </div>
+              </div>
+              
+              <!-- Categorías Filtro Rápido -->
+              <div class="quick-category-filters" id="pos-category-filters">
+                <button class="chip active" data-category="all">Todos</button>
+              </div>
+
+              <!-- Listado de Productos (Grid con diseño Material Cards) -->
+              <div class="pos-products-grid" id="pos-products-list">
+                <!-- Se inyecta dinámicamente con JS (Skeletons por defecto) -->
+              </div>
+            </div>
+
+            <!-- Panel derecho: Carrito de ventas y procesamiento de pago -->
+            <div class="pos-sidebar-panel">
+              <div class="cart-header">
+                <h3>Detalle de Venta</h3>
+                <button class="btn-text-error" id="pos-clear-cart-btn">
+                  <span class="material-icons-round">delete_sweep</span> Limpiar
+                </button>
+              </div>
+
+              <!-- Listado de items del carrito -->
+              <div class="cart-items-container" id="pos-cart-items">
+                <div class="empty-cart-msg">
+                  <span class="material-icons-round">shopping_basket</span>
+                  <p>El carrito de compras está vacío.</p>
+                </div>
+              </div>
+
+              <!-- Información de Cliente para boleta -->
+              <div class="cart-client-selector">
+                <label for="pos-client-select">Cliente</label>
+                <div class="flex-row">
+                  <select id="pos-client-select">
+                    <!-- Se carga dinámicamente con JS -->
+                  </select>
+                  <button class="btn-icon-secondary" id="pos-quick-add-client-btn" title="Nuevo Cliente">
+                    <span class="material-icons-round">person_add</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Resumen de Totales -->
+              <div class="cart-totals">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <span id="pos-subtotal">$0</span>
+                </div>
+                <div class="total-row">
+                  <span>IVA (19%)</span>
+                  <span id="pos-iva">$0</span>
+                </div>
+                <div class="total-row discount">
+                  <span>Descuento global ($)</span>
+                  <input type="number" id="pos-discount-input" value="0" min="0" step="500">
+                </div>
+                <div class="total-row main-total">
+                  <span>Total</span>
+                  <span id="pos-total">$0</span>
+                </div>
+              </div>
+
+              <!-- Observaciones -->
+              <div class="cart-observacion">
+                <input type="text" id="pos-observacion-input" placeholder="Observaciones / Comentarios adicionales...">
+              </div>
+
+              <!-- Botones de Acción de Pago -->
+              <div class="cart-actions-grid">
+                <button class="btn-primary" id="pos-pay-btn">
+                  <span class="material-icons-round">payment</span>
+                  <span>Cobrar / Pagar</span>
+                </button>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA: REGISTRO DE VENTAS & CIERRE DE CAJA
+             ========================================== -->
+        <section id="view-erp-ventas" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <div class="search-box">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="erp-sales-search" placeholder="Filtrar por Folio o Cliente...">
+              </div>
+              <div class="buttons-row">
+                <button class="btn-secondary" id="btn-cash-close" style="background-color: var(--color-primary); color: white; border-color: var(--color-primary);">
+                  <span class="material-icons-round">point_of_sale</span> Cierre de Caja
+                </button>
+                <button class="btn-primary" id="btn-sales-report">
+                  <span class="material-icons-round">assessment</span> Reporte Diario
+                </button>
+              </div>
+            </div>
+
+            <!-- Resumen Rápido Diario -->
+            <div class="bi-metrics-grid" style="margin-top: 15px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+              <div class="metric-card">
+                <div class="metric-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="metric-title" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Ventas Totales Hoy</span>
+                  <span class="material-icons-round metric-icon" style="color:#22C55E; font-size: 20px;">monetization_on</span>
+                </div>
+                <div class="metric-value" id="sales-today-amount" style="font-size: 24px; font-weight: 700; color: var(--text-primary);">$0</div>
+                <div class="metric-trend" style="color:#22C55E; font-size: 11px;">Recaudación de hoy</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="metric-title" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Transacciones</span>
+                  <span class="material-icons-round metric-icon" style="color:#0070F3; font-size: 20px;">shopping_basket</span>
+                </div>
+                <div class="metric-value" id="sales-today-count" style="font-size: 24px; font-weight: 700; color: var(--text-primary);">0</div>
+                <div class="metric-trend" style="color:#0070F3; font-size: 11px;">Boletas emitidas</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="metric-title" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Ticket Promedio</span>
+                  <span class="material-icons-round metric-icon" style="color:#A855F7; font-size: 20px;">analytics</span>
+                </div>
+                <div class="metric-value" id="sales-average-ticket" style="font-size: 24px; font-weight: 700; color: var(--text-primary);">$0</div>
+                <div class="metric-trend" style="color:#A855F7; font-size: 11px;">Promedio por cliente</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="metric-title" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Descuentos Aplicados</span>
+                  <span class="material-icons-round metric-icon" style="color:#E50914; font-size: 20px;">local_offer</span>
+                </div>
+                <div class="metric-value" id="sales-today-discounts" style="font-size: 24px; font-weight: 700; color: var(--text-primary);">$0</div>
+                <div class="metric-trend" style="color:#E50914; font-size: 11px;">Rebajas en caja</div>
+              </div>
+            </div>
+
+            <!-- Tabla de Historial de Ventas Persistidas -->
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Folio</th>
+                    <th>Fecha/Hora</th>
+                    <th>Cliente</th>
+                    <th>Vendedor</th>
+                    <th>Método de Pago</th>
+                    <th>Descuento</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="sales-table-body">
+                  <!-- Se inyecta con JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 2: ERP INVENTARIO Y STOCK
+             ========================================== -->
+        <section id="view-erp-productos" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <div class="search-box">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="erp-products-search" placeholder="Filtrar inventario...">
+              </div>
+              <div class="buttons-row">
+                <button class="btn-secondary" id="btn-erp-adjustments">
+                  <span class="material-icons-round">swap_vert</span> Movimiento Stock
+                </button>
+                <button class="btn-secondary" id="btn-erp-kardex">
+                  <span class="material-icons-round">history</span> Ver Kardex
+                </button>
+                <button class="btn-primary" id="btn-erp-new-product">
+                  <span class="material-icons-round">add</span> Crear Producto
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla de Inventario de Productos -->
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Código/SKU</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Costo</th>
+                    <th>Venta</th>
+                    <th>Margen</th>
+                    <th>Stock Actual</th>
+                    <th>Estado Stock</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-products-table-body">
+                  <!-- Inyectado por JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 3: BUSINESS INTELLIGENCE (dashboard SAP-Style)
+             ========================================== -->
+        <section id="view-bi-dashboard" class="app-view">
+          <div class="bi-dashboard-container">
+            
+            <!-- Barra de Filtros BI -->
+            <div class="bi-filters-bar">
+              <div class="filter-group">
+                <label>Rango de Fecha</label>
+                <select id="bi-filter-range">
+                  <option value="today">Hoy</option>
+                  <option value="week" selected>Últimos 7 días</option>
+                  <option value="month">Este Mes</option>
+                  <option value="year">Este Año</option>
+                </select>
+              </div>
+              <button class="btn-secondary" id="bi-export-csv-btn">
+                <span class="material-icons-round">download</span> Exportar CSV
+              </button>
+              <button class="btn-secondary" id="bi-export-pdf-btn">
+                <span class="material-icons-round">picture_as_pdf</span> Exportar PDF
+              </button>
+            </div>
+
+            <!-- Fila de Tarjetas de KPI (KPI Cards) -->
+            <div class="kpi-cards-grid">
+              <div class="kpi-card">
+                <div class="kpi-icon blue"><span class="material-icons-round">monetization_on</span></div>
+                <div class="kpi-data">
+                  <span class="kpi-label">Ventas del Mes</span>
+                  <h3 class="kpi-value" id="kpi-sales-month">$0</h3>
+                  <span class="kpi-trending green" id="kpi-trend-month">+0% vs mes anterior</span>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon green"><span class="material-icons-round">trending_up</span></div>
+                <div class="kpi-data">
+                  <span class="kpi-label">Utilidades Estimadas (Mes)</span>
+                  <h3 class="kpi-value" id="kpi-profits-month">$0</h3>
+                  <span class="kpi-trending text-muted">Margen promedio</span>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon fuchsia"><span class="material-icons-round">shopping_bag</span></div>
+                <div class="kpi-data">
+                  <span class="kpi-label">Artículos Vendidos (Mes)</span>
+                  <h3 class="kpi-value" id="kpi-units-sold">0</h3>
+                  <span class="kpi-trending text-muted">Unidades totales</span>
+                </div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-icon red"><span class="material-icons-round">receipt</span></div>
+                <div class="kpi-data">
+                  <span class="kpi-label">Ticket Promedio (Hoy)</span>
+                  <h3 class="kpi-value" id="kpi-avg-ticket">$0</h3>
+                  <span class="kpi-trending" id="kpi-avg-ticket-desc">Ventas del día</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gráficos Interactivos (Grid de Canvas) -->
+            <div class="bi-charts-grid">
+              <div class="chart-card">
+                <h4 class="chart-title">Curva de Ventas Semanales</h4>
+                <div class="chart-wrapper">
+                  <canvas id="chart-sales-history"></canvas>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h4 class="chart-title">Participación de Categorías</h4>
+                <div class="chart-wrapper">
+                  <canvas id="chart-categories-share"></canvas>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h4 class="chart-title">Productos de Alta Rotación</h4>
+                <div class="chart-wrapper">
+                  <canvas id="chart-high-rotation"></canvas>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h4 class="chart-title">Productos de Baja Rotación</h4>
+                <div class="chart-wrapper">
+                  <canvas id="chart-low-rotation"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Listas Top de Negocio -->
+            <div class="bi-tops-grid">
+              <div class="top-list-card">
+                <h4 class="card-title">Top Clientes Premium</h4>
+                <ol class="top-list" id="bi-top-clients">
+                  <!-- Carga dinámica -->
+                </ol>
+              </div>
+              <div class="top-list-card">
+                <h4 class="card-title">Ranking de Vendedores</h4>
+                <ol class="top-list" id="bi-top-sellers">
+                  <!-- Carga dinámica -->
+                </ol>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 4: ORDENES DE COMPRAS Y RECEPCIONES
+             ========================================== -->
+        <section id="view-erp-compras" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <h3 class="section-title">Órdenes de Compra y Recepción</h3>
+              <button class="btn-primary" id="btn-erp-new-purchase">
+                <span class="material-icons-round">add_shopping_cart</span> Nueva Compra (OC)
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Folio OC</th>
+                    <th>Proveedor</th>
+                    <th>Fecha Pedido</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-purchases-table-body">
+                  <!-- Carga dinámica -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 5: CLIENTES CRUD
+             ========================================== -->
+        <section id="view-erp-clientes" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <div class="search-box">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="erp-clients-search" placeholder="Buscar clientes...">
+              </div>
+              <button class="btn-primary" id="btn-erp-new-client">
+                <span class="material-icons-round">person_add</span> Registrar Cliente
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>RUT / NIT</th>
+                    <th>Nombre Comercial</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Dirección</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-clients-table-body">
+                  <!-- Carga dinámica -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 6: PROVEEDORES CRUD
+             ========================================== -->
+        <section id="view-erp-proveedores" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <div class="search-box">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="erp-suppliers-search" placeholder="Buscar proveedores...">
+              </div>
+              <button class="btn-primary" id="btn-erp-new-supplier">
+                <span class="material-icons-round">local_shipping</span> Registrar Proveedor
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>RUT / NIT</th>
+                    <th>Nombre Proveedor</th>
+                    <th>Contacto</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-suppliers-table-body">
+                  <!-- Carga dinámica -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
+             VISTA 7: PANEL ADMINISTRADOR (AUDITORIA Y CONFIG)
+             ========================================== -->
+        <section id="view-admin-panel" class="app-view">
+          <div class="admin-layout">
+            <!-- Pestañas del Admin -->
+            <div class="admin-tabs">
+              <button class="tab-btn active" data-tab="admin-users">Gestión de Usuarios</button>
+              <button class="tab-btn" data-tab="admin-audit">Auditoría de Seguridad</button>
+              <button class="tab-btn" data-tab="admin-logs">Historial de Logs</button>
+            </div>
+            
+            <div class="admin-tab-content">
+              <!-- Subvista: Usuarios -->
+              <div id="tab-admin-users" class="tab-pane active-pane">
+                <div class="table-header-actions">
+                  <h4>Usuarios y Perfiles</h4>
+                  <button class="btn-primary" id="btn-admin-new-user">
+                    <span class="material-icons-round">person_add_alt_1</span> Crear Usuario
+                  </button>
+                </div>
+                <div class="table-responsive">
+                  <table class="erp-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-users-table-body">
+                      <!-- Inyectado por JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Subvista: Auditoría -->
+              <div id="tab-admin-audit" class="tab-pane">
+                <h4>Auditoría de Cambios del Sistema</h4>
+                <div class="table-responsive">
+                  <table class="erp-table small-text">
+                    <thead>
+                      <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Módulo/Tabla</th>
+                        <th>ID Reg</th>
+                        <th>Valor Anterior</th>
+                        <th>Valor Nuevo</th>
+                        <th>Dirección IP</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-audit-table-body">
+                      <!-- Inyectado por JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Subvista: Logs -->
+              <div id="tab-admin-logs" class="tab-pane">
+                <h4>Logs del Sistema</h4>
+                <div class="table-responsive">
+                  <table class="erp-table small-text">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Nivel</th>
+                        <th>Mensaje</th>
+                        <th>Contexto</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-logs-table-body">
+                      <!-- Inyectado por JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       TOAST NOTIFICATIONS (MATERIAL DESIGN)
+       ========================================== -->
+  <div id="toast-container" class="toast-area"></div>
+
+  <!-- ==========================================
+       MODALES (DIÁLOGOS MATERIAL DESIGN 3)
+       ========================================== -->
+  
+  <!-- Modal 1: Procesar Pago en POS -->
+  <div id="modal-payment" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Procesar Pago y Emisión</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-summary">
+          <div class="summary-total-text">Total a Pagar</div>
+          <div class="summary-total-value" id="payment-modal-total">$0</div>
+        </div>
+        
+        <form id="payment-form">
+          <div class="form-group">
+            <label for="payment-method-select">Método de Pago</label>
+            <select id="payment-method-select" class="form-control" required>
+              <option value="efectivo">Efectivo</option>
+              <option value="debito">Tarjeta de Débito</option>
+              <option value="credito">Tarjeta de Crédito</option>
+              <option value="transferencia">Transferencia Bancaria</option>
+              <option value="mixto">Pago Mixto</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="payment-monto-wrapper">
+            <label for="payment-monto-input">Monto Recibido</label>
+            <input type="number" id="payment-monto-input" class="form-control" placeholder="Monto entregado" required>
+          </div>
+
+          <!-- Campos especiales para pago mixto -->
+          <div id="payment-mixto-fields" class="hide">
+            <div class="mixto-grid">
+              <div>
+                <label>Efectivo ($)</label>
+                <input type="number" id="pay-mix-cash" class="form-control" value="0">
+              </div>
+              <div>
+                <label>Tarjeta ($)</label>
+                <input type="number" id="pay-mix-card" class="form-control" value="0">
+              </div>
+              <div>
+                <label>Transferencia ($)</label>
+                <input type="number" id="pay-mix-trans" class="form-control" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="change-calculation-box" id="payment-change-box">
+            <span>Vuelto/Cambio:</span>
+            <strong id="payment-change-value">$0</strong>
+          </div>
+          
+          <!-- Datos de Envío Digital (Cliente) -->
+          <div class="digital-receipt-fields" style="margin-top: 15px; margin-bottom: 15px; padding: 12px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-body);">
+            <h5 style="margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">Datos de Envío Digital (Cliente)</h5>
+            
+            <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="payment-client-email" style="font-size: 11px; margin-bottom: 2px; display: block; font-weight: 500;">Email del Cliente</label>
+                <input type="email" id="payment-client-email" class="form-control" style="font-size: 12px; padding: 6px; height: 32px;" placeholder="correo@cliente.com">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="payment-client-phone" style="font-size: 11px; margin-bottom: 2px; display: block; font-weight: 500;">WhatsApp del Cliente</label>
+                <input type="text" id="payment-client-phone" class="form-control" style="font-size: 12px; padding: 6px; height: 32px;" placeholder="+569...">
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Confirmar Venta y Ticket</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Ticket Impreso / Comprobante Térmico -->
+  <div id="modal-ticket" class="modal-overlay">
+    <div class="modal-card ticket-card">
+      <div class="modal-header">
+        <h3>Ticket Emitido</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="thermal-ticket-container" id="thermal-ticket">
+          <!-- Se inyecta la boleta real con JS -->
+        </div>
+
+        <!-- Sección de Compartir Copia con el Cliente -->
+        <div class="client-share-section" style="margin-top: 15px; padding: 12px; background: var(--bg-body); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+          <h5 style="margin-bottom: 8px; font-weight: 600; font-size: 13px; color: var(--text-secondary);">Enviar Copia Digital al Cliente</h5>
+          
+          <div class="form-grid-2" style="margin-bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 11px; margin-bottom: 2px; display: block; font-weight: 500;">Email del Cliente</label>
+              <div style="display: flex; gap: 4px;">
+                <input type="email" id="share-client-email" class="form-control" style="font-size: 12px; padding: 6px; height: 32px;" placeholder="correo@cliente.com">
+                <button type="button" class="btn-primary" id="btn-share-client-email" style="padding: 6px 10px; min-width: auto; height: 32px;" title="Enviar por Correo">
+                  <span class="material-icons-round" style="font-size: 16px;">mail</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 11px; margin-bottom: 2px; display: block; font-weight: 500;">WhatsApp del Cliente</label>
+              <div style="display: flex; gap: 4px;">
+                <input type="text" id="share-client-phone" class="form-control" style="font-size: 12px; padding: 6px; height: 32px;" placeholder="+569...">
+                <button type="button" class="btn-secondary" id="btn-share-client-wsp" style="padding: 6px 10px; min-width: auto; height: 32px; background-color: #25D366; color: white; border-color: #25D366;" title="Enviar por WhatsApp">
+                  <span class="material-icons-round" style="font-size: 16px;">share</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions-ticket" style="display: flex; gap: 8px; margin-top: 15px;">
+          <button class="btn-secondary" id="btn-print-ticket">
+            <span class="material-icons-round">print</span> Imprimir (Ticket Térmico)
+          </button>
+          <button class="btn-secondary" id="btn-wsp-ticket" style="background-color: #25D366; color: white; border-color: #25D366;">
+            <span class="material-icons-round">share</span> WhatsApp
+          </button>
+          <button class="btn-primary" id="btn-download-pdf">
+            <span class="material-icons-round">download</span> Guardar PDF / Historial
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Crear / Editar Producto -->
+  <div id="modal-product" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="product-modal-title">Registrar Nuevo Producto</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="product-form">
+          <input type="hidden" id="product-id-input">
+          
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="prod-code">Código de Producto*</label>
+              <input type="text" id="prod-code" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="prod-barcode">Código de Barras</label>
+              <input type="text" id="prod-barcode" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-name">Nombre Comercial del Producto*</label>
+            <input type="text" id="prod-name" class="form-control" required>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="prod-category">Categoría*</label>
+              <select id="prod-category" class="form-control" required>
+                <!-- Carga dinámica -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="prod-brand">Marca</label>
+              <input type="text" id="prod-brand" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-supplier">Proveedor Referencial</label>
+            <select id="prod-supplier" class="form-control">
+              <!-- Carga dinámica -->
+            </select>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="prod-cost">Precio Costo ($)*</label>
+              <input type="number" id="prod-cost" class="form-control" value="0" required>
+            </div>
+            <div class="form-group">
+              <label for="prod-price">Precio Venta ($)*</label>
+              <input type="number" id="prod-price" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Margen Estimado</label>
+              <div class="form-control-static" id="prod-margin-preview">0.00%</div>
+            </div>
+          </div>
+
+          <div class="form-grid-2" id="stock-inputs-wrapper">
+            <div class="form-group">
+              <label for="prod-stock">Stock Inicial</label>
+              <input type="number" id="prod-stock" class="form-control" value="0">
+            </div>
+            <div class="form-group">
+              <label for="prod-min-stock">Stock Mínimo Alerta</label>
+              <input type="number" id="prod-min-stock" class="form-control" value="5">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-image">URL de la Imagen</label>
+            <input type="text" id="prod-image" class="form-control" placeholder="https://ejemplo.com/imagen.jpg">
+          </div>
+
+          <div class="form-group">
+            <label for="prod-desc">Descripción del Producto</label>
+            <textarea id="prod-desc" class="form-control" rows="2"></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary" id="btn-save-product">Guardar Producto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Movimiento de Inventario Manual -->
+  <div id="modal-adjustment" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Registrar Movimiento de Stock (Kardex)</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="adjustment-form">
+          <div class="form-group">
+            <label for="adj-product">Producto</label>
+            <select id="adj-product" class="form-control" required></select>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="adj-type">Tipo de Movimiento</label>
+              <select id="adj-type" class="form-control" required>
+                <option value="ingreso_ajuste">Ingreso: Ajuste de Inventario (+)</option>
+                <option value="egreso_ajuste">Egreso: Ajuste de Inventario (-)</option>
+                <option value="egreso_perdida">Egreso: Pérdida (-)</option>
+                <option value="egreso_merma">Egreso: Merma (-)</option>
+                <option value="transferencia_entrada">Ingreso: Transferencia de Bodega (+)</option>
+                <option value="transferencia_salida">Egreso: Transferencia de Bodega (-)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="adj-quantity">Cantidad Unidades</label>
+              <input type="number" id="adj-quantity" class="form-control" min="1" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="adj-reason">Motivo / Explicación del Ajuste*</label>
+            <textarea id="adj-reason" class="form-control" rows="2" placeholder="Describir causa detallada..." required></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Registrar Movimiento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Historial Kardex -->
+  <div id="modal-kardex" class="modal-overlay">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>Historial Completo de Movimientos (Kardex)</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive max-height-400">
+          <table class="erp-table small-text">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Tipo de Movimiento</th>
+                <th>Cantidad</th>
+                <th>Usuario</th>
+                <th>Detalle/Motivo</th>
+              </tr>
+            </thead>
+            <tbody id="kardex-table-body">
+              <!-- Inyectado por JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Nueva Orden de Compra -->
+  <div id="modal-purchase" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Crear Orden de Compra & Recepción</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="purchase-form">
+          <div class="form-group">
+            <label for="pur-supplier">Proveedor Emisor</label>
+            <select id="pur-supplier" class="form-control" required></select>
+          </div>
+          
+          <div class="purchase-items-selection">
+            <h5>Seleccionar Artículos a Comprar</h5>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="pur-item-select">Producto</label>
+                <select id="pur-item-select" class="form-control"></select>
+              </div>
+              <div class="form-group">
+                <label for="pur-item-qty">Cantidad</label>
+                <input type="number" id="pur-item-qty" class="form-control" min="1" value="10">
+              </div>
+              <div class="form-group">
+                <label for="pur-item-cost">Costo Compra Unitario ($)</label>
+                <input type="number" id="pur-item-cost" class="form-control">
+              </div>
+            </div>
+            <button type="button" class="btn-secondary" id="btn-add-item-purchase">Agregar a la lista</button>
+          </div>
+
+          <div class="table-responsive small-table">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Costo Unitario</th>
+                  <th>Subtotal</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="purchase-items-list-body">
+                <!-- Se agregan dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="purchase-total-preview">
+            <span>Total Compra:</span>
+            <strong id="purchase-total-value">$0</strong>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Registrar Compra e Ingresar Stock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Registrar Cliente -->
+  <div id="modal-client" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="client-modal-title">Registrar Cliente</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="client-form">
+          <input type="hidden" id="client-id-input">
+          <div class="form-group">
+            <label for="cli-rut">RUT / Identificación Fiscal*</label>
+            <input type="text" id="cli-rut" class="form-control" required placeholder="12.345.678-9">
+          </div>
+          <div class="form-group">
+            <label for="cli-name">Nombre Comercial / Razón Social*</label>
+            <input type="text" id="cli-name" class="form-control" required placeholder="Nombre del cliente">
+          </div>
+          <div class="form-group">
+            <label for="cli-phone">Teléfono de Contacto</label>
+            <input type="text" id="cli-phone" class="form-control" placeholder="+569...">
+          </div>
+          <div class="form-group">
+            <label for="cli-email">Correo Electrónico</label>
+            <input type="email" id="cli-email" class="form-control" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="form-group">
+            <label for="cli-dir">Dirección Despacho/Comercial</label>
+            <input type="text" id="cli-dir" class="form-control" placeholder="Av. Principal 123">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Cliente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 8: Registrar Proveedor -->
+  <div id="modal-supplier" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="supplier-modal-title">Registrar Proveedor</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="supplier-form">
+          <input type="hidden" id="supplier-id-input">
+          <div class="form-group">
+            <label for="sup-rut">RUT / Identificación Fiscal*</label>
+            <input type="text" id="sup-rut" class="form-control" required placeholder="77.777.777-7">
+          </div>
+          <div class="form-group">
+            <label for="sup-name">Razón Social del Proveedor*</label>
+            <input type="text" id="sup-name" class="form-control" required placeholder="Distribuidora Limitada">
+          </div>
+          <div class="form-group">
+            <label for="sup-contact">Nombre del Contacto</label>
+            <input type="text" id="sup-contact" class="form-control" placeholder="Ej: Ejecutivo de ventas">
+          </div>
+          <div class="form-group">
+            <label for="sup-phone">Teléfono</label>
+            <input type="text" id="sup-phone" class="form-control" placeholder="+5622...">
+          </div>
+          <div class="form-group">
+            <label for="sup-email">Email Corporativo</label>
+            <input type="email" id="sup-email" class="form-control" placeholder="proveedor@empresa.com">
+          </div>
+          <div class="form-group">
+            <label for="sup-dir">Dirección Oficina</label>
+            <input type="text" id="sup-dir" class="form-control">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Proveedor</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 9: Registrar Usuario (Admin) -->
+  <div id="modal-user" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="user-modal-title">Registrar Nuevo Usuario</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="user-form">
+          <input type="hidden" id="user-id-input">
+          <div class="form-group">
+            <label for="usr-username">Nombre de Usuario (Login)*</label>
+            <input type="text" id="usr-username" class="form-control" required placeholder="Ej: carlos.perez">
+          </div>
+          <div class="form-group">
+            <label for="usr-password">Contraseña (Vacío para mantener actual)*</label>
+            <input type="password" id="usr-password" class="form-control" placeholder="Mínimo 6 caracteres">
+          </div>
+          <div class="form-group">
+            <label for="usr-name">Nombre Completo*</label>
+            <input type="text" id="usr-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="usr-email">Correo Electrónico</label>
+            <input type="email" id="usr-email" class="form-control">
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="usr-role">Rol del Usuario*</label>
+              <select id="usr-role" class="form-control" required>
+                <option value="1">Administrador</option>
+                <option value="2">Supervisor</option>
+                <option value="3">Cajero</option>
+                <option value="4">Bodega</option>
+                <option value="5">Gerencia</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="usr-status">Estado*</label>
+              <select id="usr-status" class="form-control" required>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Usuario</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTA DE STOCK CRITICO MODAL -->
+  <div id="modal-alerts" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Alertas de Stock Crítico</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="alerts-list-container" id="alerts-list-body">
+          <!-- Inyectado por JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: Cierre de Caja -->
+  <div id="modal-cash-close" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Cierre de Caja & Arqueo Diario</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div id="cash-close-print-area" style="padding: 15px; background: white; color: black; font-family: monospace; font-size: 12px; border: 1px dashed #ccc; margin-bottom: 15px; border-radius: var(--border-radius-sm);">
+          <h4 style="text-align: center; margin: 0; font-size: 14px;">ELEODORO EL GRANDE</h4>
+          <p style="text-align: center; margin: 2px 0;">REPORTE DE CIERRE DE CAJA</p>
+          <p style="text-align: center; margin: 0;" id="cash-close-date">Fecha: --/--/----</p>
+          <hr style="border: 0.5px dashed black; margin: 8px 0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Ventas Totales ($):</span>
+            <strong id="cc-total-sales">$0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Boletas Emitidas:</span>
+            <span id="cc-tx-count">0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Descuentos Aplicados:</span>
+            <span id="cc-discounts">$0</span>
+          </div>
+          <hr style="border: 0.5px dashed black; margin: 8px 0;">
+          <p style="font-weight: bold; margin: 4px 0 6px 0;">DESGLOSE MEDIOS DE PAGO</p>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Efectivo:</span>
+            <span id="cc-pay-cash">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Tarjeta Débito/Crédito:</span>
+            <span id="cc-pay-card">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Transferencia:</span>
+            <span id="cc-pay-trans">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Pago Mixto:</span>
+            <span id="cc-pay-mixed">$0</span>
+          </div>
+          <hr style="border: 0.5px dashed black; margin: 8px 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold;">
+            <span>Utilidad Estimada (35%):</span>
+            <span id="cc-profit">$0</span>
+          </div>
+          <hr style="border: 0.5px dashed black; margin: 8px 0;">
+          <p style="text-align: center; margin: 0; font-size: 10px;">Cierre emitido localmente.</p>
+        </div>
+        
+        <div class="modal-actions-ticket" style="display: flex; gap: 8px;">
+          <button class="btn-secondary" id="btn-print-cash-close" style="flex: 1;">
+            <span class="material-icons-round">print</span> Imprimir Cierre
+          </button>
+          <button class="btn-secondary" id="btn-wsp-cash-close" style="background-color: #25D366; color: white; border-color: #25D366;">
+            <span class="material-icons-round">share</span> WhatsApp
+          </button>
+          <button class="btn-primary" id="btn-email-cash-close">
+            <span class="material-icons-round">mail</span> Enviar Cierre
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carga del Lado Cliente JavaScript -->
+  <script src="js/app.js"></script>
+  <script src="js/pos.js"></script>
+  <script src="js/erp.js"></script>
+  <script src="js/bi.js"></script>
+</body>
+</html>

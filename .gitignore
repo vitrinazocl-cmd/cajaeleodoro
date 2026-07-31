@@ -1,0 +1,7 @@
+node_modules/
+.env
+exports/
+*.mp4
+*.jpeg
+*.jpg
+local_backup.db
