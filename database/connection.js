@@ -132,22 +132,36 @@ function initConnection() {
           } else {
             console.log('[DB] Esquema e índices de PostgreSQL validados/creados.');
             
-            // Insertar administrador base
-            pgPool.query('SELECT id FROM usuarios WHERE username = $1', ['eleodoro'], (uErr, uRes) => {
-              if (uRes && uRes.rows.length === 0) {
-                const salt = bcrypt.genSaltSync(10);
-                const hash = bcrypt.hashSync('123456', salt);
-                pgPool.query(
-                  'INSERT INTO usuarios (username, password_hash, nombre, email, rol_id, estado) VALUES ($1, $2, $3, $4, $5, $6)',
-                  ['eleodoro', hash, 'Eleodoro El Grande', 'contacto@eleodoro.cl', 1, 'activo'],
-                  () => {
+            // Sincronizar secuencias de claves primarias seriales en PostgreSQL para evitar colisiones
+            const syncQueries = [
+              "SELECT setval(pg_get_serial_sequence('roles', 'id'), COALESCE(max(id), 1)) FROM roles",
+              "SELECT setval(pg_get_serial_sequence('categorias', 'id'), COALESCE(max(id), 1)) FROM categorias",
+              "SELECT setval(pg_get_serial_sequence('clientes', 'id'), COALESCE(max(id), 1)) FROM clientes",
+              "SELECT setval(pg_get_serial_sequence('proveedores', 'id'), COALESCE(max(id), 1)) FROM proveedores",
+              "SELECT setval(pg_get_serial_sequence('productos', 'id'), COALESCE(max(id), 1)) FROM productos"
+            ];
+            
+            Promise.all(syncQueries.map(q => pgPool.query(q)))
+              .then(() => console.log('[DB] Secuencias de PostgreSQL sincronizadas con éxito.'))
+              .catch(syncErr => console.warn('[DB] Advertencia al sincronizar secuencias:', syncErr.message))
+              .finally(() => {
+                // Insertar administrador base
+                pgPool.query('SELECT id FROM usuarios WHERE username = $1', ['eleodoro'], (uErr, uRes) => {
+                  if (uRes && uRes.rows.length === 0) {
+                    const salt = bcrypt.genSaltSync(10);
+                    const hash = bcrypt.hashSync('123456', salt);
+                    pgPool.query(
+                      'INSERT INTO usuarios (username, password_hash, nombre, email, rol_id, estado) VALUES ($1, $2, $3, $4, $5, $6)',
+                      ['eleodoro', hash, 'Eleodoro El Grande', 'contacto@eleodoro.cl', 1, 'activo'],
+                      () => {
+                        connectionResolver();
+                      }
+                    );
+                  } else {
                     connectionResolver();
                   }
-                );
-              } else {
-                connectionResolver();
-              }
-            });
+                });
+              });
           }
         });
       } catch (fErr) {
