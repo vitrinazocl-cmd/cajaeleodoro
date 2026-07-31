@@ -1327,11 +1327,9 @@ async function autoImportCatalog() {
           supplierId = supInsert.rows[0].id;
         }
 
-        // Limpiar productos viejos para evitar duplicación
+        // Limpiar productos viejos para evitar duplicación (conservando siempre las ventas históricas intactas)
         await db.query('DELETE FROM movimientos_inventario');
         await db.query('DELETE FROM inventario');
-        await db.query('DELETE FROM detalle_ventas');
-        await db.query('DELETE FROM ventas');
         await db.query('DELETE FROM productos');
 
         // 3. Insertar productos

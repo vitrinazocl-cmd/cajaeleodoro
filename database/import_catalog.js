@@ -85,12 +85,10 @@ async function runImport() {
       supplierId = supInsert.rows[0].id;
     }
 
-    // 4. Limpiar productos previos en la base de datos para evitar colisión de claves únicas
+    // 4. Limpiar productos previos en la base de datos para evitar colisión de claves únicas (conservando ventas intactas)
     console.log('Limpiando catálogo base previo...');
     await db.query('DELETE FROM movimientos_inventario');
     await db.query('DELETE FROM inventario');
-    await db.query('DELETE FROM detalle_ventas');
-    await db.query('DELETE FROM ventas');
     await db.query('DELETE FROM productos');
 
     // 5. Insertar Productos
