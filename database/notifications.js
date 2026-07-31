@@ -148,7 +148,14 @@ function generatePurchasePDF(purchase, items, supplierName) {
 async function sendEmailNotification(subject, htmlBody, attachments = [], recipient = 'vitrinazo.cl@gmail.com') {
   // Transporter SMTP Configurable o JSON Transporter de pruebas
   let transporter;
-  const isSmtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
+  const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
+  let smtpPass = process.env.SMTP_PASS || process.env.GMAIL_PASS;
+
+  if (smtpPass) {
+    smtpPass = smtpPass.replace(/\s+/g, ''); // Limpiar cualquier espacio copiado del token de aplicación de Gmail
+  }
+
+  const isSmtpConfigured = smtpUser && smtpPass;
 
   if (isSmtpConfigured) {
     transporter = nodemailer.createTransport({
@@ -156,8 +163,8 @@ async function sendEmailNotification(subject, htmlBody, attachments = [], recipi
       port: parseInt(process.env.SMTP_PORT) || 465,
       secure: true,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: smtpUser,
+        pass: smtpPass
       }
     });
   } else {
@@ -168,7 +175,7 @@ async function sendEmailNotification(subject, htmlBody, attachments = [], recipi
   }
 
   const mailOptions = {
-    from: `"Eleodoro El Grande" <${process.env.SMTP_USER || 'contacto@eleodoroelgrande.cl'}>`,
+    from: `"Eleodoro El Grande" <${smtpUser || 'contacto@eleodoroelgrande.cl'}>`,
     to: recipient,
     subject: subject,
     html: htmlBody,
