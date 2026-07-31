@@ -1360,11 +1360,11 @@ app.listen(PORT, async () => {
 
 async function autoImportCatalog() {
   try {
-    // Comprobar si el producto 'CATUNSG16' ya existe para saber si el catálogo real está cargado
-    const check = await db.query("SELECT id FROM productos WHERE codigo = $1", ["CATUNSG16"]);
-    const hasRealCatalog = check.rows.length > 0;
+    // Si la cantidad de productos es menor a 100, importamos/actualizamos el catálogo real
+    const check = await db.query('SELECT COUNT(*) as count FROM productos');
+    const count = parseInt(check.rows[0].count) || 0;
     
-    if (!hasRealCatalog) {
+    if (count < 100) {
       console.log('[DB] El catálogo en base de datos está vacío o incompleto. Iniciando importación automática...');
       
       const catalogoPath = path.join(__dirname, 'database', 'catalogo.js');
