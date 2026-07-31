@@ -192,8 +192,12 @@ CREATE TABLE IF NOT EXISTS logs (
 -- Índices para optimizar velocidad de consultas
 CREATE INDEX IF NOT EXISTS idx_productos_codigo_barra ON productos(codigo_barra);
 CREATE INDEX IF NOT EXISTS idx_productos_codigo ON productos(codigo);
+CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_ventas_folio ON ventas(folio);
 CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas(fecha_hora);
+CREATE INDEX IF NOT EXISTS idx_detalle_ventas_venta ON detalle_ventas(venta_id);
+CREATE INDEX IF NOT EXISTS idx_detalle_ventas_producto ON detalle_ventas(producto_id);
+CREATE INDEX IF NOT EXISTS idx_pagos_venta ON pagos(venta_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_producto ON movimientos_inventario(producto_id);
 CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
 

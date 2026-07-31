@@ -18,16 +18,61 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'eleodoro_el_grande_secret_key_2026_harvard';
 
 // MIDDLEWARES DE SEGURIDAD Y PARSEO
+const compression = require('compression');
+app.use(compression()); // Activar compresión GZIP de todas las respuestas estáticas y de API
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Cabeceras de seguridad básicas
+// Limitador de peticiones en memoria para protección DDoS y Fuerza Bruta
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
+const MAX_REQUESTS = 100; // Máximo 100 peticiones por minuto por IP para uso normal
+const AUTH_MAX_REQUESTS = 10; // Máximo 10 intentos de login por minuto por IP
+
+function rateLimiter(isAuthRoute = false) {
+  return (req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const now = Date.now();
+    const key = `${ip}:${isAuthRoute ? 'auth' : 'api'}`;
+    
+    if (!rateLimitMap.has(key)) {
+      rateLimitMap.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      return next();
+    }
+    
+    const limit = rateLimitMap.get(key);
+    if (now > limit.resetTime) {
+      limit.count = 1;
+      limit.resetTime = now + RATE_LIMIT_WINDOW;
+      return next();
+    }
+    
+    limit.count++;
+    const max = isAuthRoute ? AUTH_MAX_REQUESTS : MAX_REQUESTS;
+    if (limit.count > max) {
+      return res.status(429).json({ 
+        success: false, 
+        message: `Demasiadas peticiones detectadas. Por seguridad, por favor intenta nuevamente en ${Math.round((limit.resetTime - now) / 1000)} segundos.` 
+      });
+    }
+    
+    next();
+  };
+}
+
+// Aplicar limitador de seguridad a todas las llamadas a la API
+app.use('/api', rateLimiter(false));
+
+// Cabeceras de seguridad avanzadas (OWASP/SANS compliant)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Content-Security-Policy', "default-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net");
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=(), payment=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Content-Security-Policy', "default-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://wa.me; frame-ancestors 'none'; form-action 'self'");
   next();
 });
 
@@ -89,7 +134,7 @@ function requireRole(rolesPermitidos) {
 // RUTAS DE AUTENTICACIÓN
 // -------------------------------------------------------------
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', rateLimiter(true), async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -107,6 +152,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (userRes.rows.length === 0) {
       await registerLog('WARNING', `Intento de login fallido para usuario: ${username}`, `IP: ${req.ip}`);
+      await new Promise(resolve => setTimeout(resolve, 800)); // Freno artificial para ralentizar ataques de fuerza bruta
       return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
     }
 
@@ -115,6 +161,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (!passwordMatch) {
       await registerLog('WARNING', `Intento de login con clave errónea para usuario: ${username}`, `IP: ${req.ip}`);
+      await new Promise(resolve => setTimeout(resolve, 800)); // Freno artificial para ralentizar ataques de fuerza bruta
       return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
     }
 
