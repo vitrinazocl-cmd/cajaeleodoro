@@ -1407,21 +1407,7 @@ async function autoImportCatalog() {
           supplierId = supInsert.rows[0].id;
         }
 
-        // Limpiar productos viejos para evitar duplicación (conservando siempre las ventas históricas intactas)
-        await db.query('DELETE FROM movimientos_inventario');
-        await db.query('DELETE FROM inventario');
-        await db.query('DELETE FROM productos');
-
-        // Reiniciar secuencias de ID autoincrementales en Postgres para evitar colisiones
-        if (db.getMode() === 'POSTGRES') {
-          try {
-            await db.query("ALTER SEQUENCE productos_id_seq RESTART WITH 1");
-          } catch (seqErr) {
-            console.warn('[DB] No se pudo reiniciar secuencia productos_id_seq:', seqErr.message);
-          }
-        }
-
-        // 3. Insertar productos
+        // 3. Insertar o actualizar productos de forma no destructiva (upsert) para evitar violar claves foráneas
         for (let i = 0; i < oldProducts.length; i++) {
           const p = oldProducts[i];
           const categoryId = categoryMap.get(p.category) || null;
@@ -1438,29 +1424,47 @@ async function autoImportCatalog() {
           const descripcion = `Producto importado de www.eleodoroelgrande.cl. Sabores/Variaciones: ${p.flavors ? p.flavors.join(', ') : 'Ninguno'}.`;
           const marca = formatName(p.category);
 
-          const prodInsert = await db.query(
-            `INSERT INTO productos 
-             (codigo, sku, codigo_barra, nombre, descripcion, categoria_id, marca, proveedor_id, precio_costo, precio_venta, margen, stock_actual, stock_minimo, imagen_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-             RETURNING id`,
-            [codigo, sku, barcode, nombre, descripcion, categoryId, marca, supplierId, precioCosto, precioVenta, margen, stockActual, stockMinimo, imagenUrl]
-          );
+          // Comprobar si el producto ya existe por su código único
+          const prodCheck = await db.query('SELECT id FROM productos WHERE codigo = $1', [codigo]);
 
-          const newProductId = prodInsert.rows[0].id;
+          if (prodCheck.rows.length > 0) {
+            // Actualizar datos del producto existente sin tocar su ID ni borrarlo
+            const existingId = prodCheck.rows[0].id;
+            await db.query(
+              `UPDATE productos SET 
+               nombre = $1, precio_venta = $2, precio_costo = $3, margen = $4,
+               categoria_id = $5, marca = $6, imagen_url = $7, updated_at = CURRENT_TIMESTAMP
+               WHERE id = $8`,
+              [nombre, precioVenta, precioCosto, margen, categoryId, marca, imagenUrl, existingId]
+            );
+          } else {
+            // Insertar producto nuevo
+            const prodInsert = await db.query(
+              `INSERT INTO productos 
+               (codigo, sku, codigo_barra, nombre, descripcion, categoria_id, marca, proveedor_id, precio_costo, precio_venta, margen, stock_actual, stock_minimo, imagen_url)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+               RETURNING id`,
+              [codigo, sku, barcode, nombre, descripcion, categoryId, marca, supplierId, precioCosto, precioVenta, margen, stockActual, stockMinimo, imagenUrl]
+            );
 
-          await db.query(
-            `INSERT INTO inventario (producto_id, stock_actual, stock_minimo, ubicacion)
-             VALUES ($1, $2, $3, $4)`,
-            [newProductId, stockActual, stockMinimo, 'Bodega Principal A']
-          );
+            const newProductId = prodInsert.rows[0].id;
 
-          await db.query(
-            `INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, motivo, usuario_id)
-             VALUES ($1, 'ingreso_ajuste', $2, 'Carga de stock inicial catálogo www.eleodoroelgrande.cl', 1)`,
-            [newProductId, stockActual]
-          );
+            // Vincular al inventario inicial
+            await db.query(
+              `INSERT INTO inventario (producto_id, stock_actual, stock_minimo, ubicacion)
+               VALUES ($1, $2, $3, $4)`,
+              [newProductId, stockActual, stockMinimo, 'Bodega Principal A']
+            );
+
+            // Registrar movimiento inicial en Kardex
+            await db.query(
+              `INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, motivo, usuario_id)
+               VALUES ($1, 'ingreso_ajuste', $2, 'Carga de stock inicial catálogo www.eleodoroelgrande.cl', 1)`,
+              [newProductId, stockActual]
+            );
+          }
         }
-        console.log(`[DB] Catálogo de ${oldProducts.length} productos reales importado con éxito.`);
+        console.log(`[DB] Catálogo de ${oldProducts.length} productos procesado exitosamente (agregados/actualizados).`);
       } else {
         console.warn(`[DB] No se encontró el archivo de catálogo en ${catalogoPath}`);
       }
