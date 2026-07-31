@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS productos (
     stock_actual INT DEFAULT 0,
     stock_minimo INT DEFAULT 5,
     imagen_url TEXT,
+    estado VARCHAR(20) DEFAULT 'activo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

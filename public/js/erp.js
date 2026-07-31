@@ -37,7 +37,13 @@ function renderProductsTable(products) {
     let stockStatus = 'Normal';
     let styleText = 'color:#22C55E;';
 
-    if (p.stock_actual <= 0) {
+    const isAgotado = p.estado === 'agotado';
+
+    if (isAgotado) {
+      stockClass = 'badge badge-error';
+      stockStatus = 'Agotado (Manual)';
+      styleText = 'color:var(--color-primary); font-weight:700;';
+    } else if (p.stock_actual <= 0) {
       stockClass = 'badge badge-error';
       stockStatus = 'Agotado';
       styleText = 'color:var(--color-primary); font-weight:700;';
@@ -47,8 +53,12 @@ function renderProductsTable(products) {
       styleText = 'color:#F97316; font-weight:700;';
     }
 
+    const toggleIcon = isAgotado ? 'toggle_off' : 'toggle_on';
+    const toggleColor = isAgotado ? 'color:var(--text-muted);' : 'color:#22C55E;';
+    const toggleTitle = isAgotado ? 'Marcar como Activo' : 'Marcar como Agotado';
+
     return `
-      <tr>
+      <tr style="${isAgotado ? 'opacity:0.65; background:rgba(0,0,0,0.02);' : ''}">
         <td>
           <strong>${p.codigo}</strong><br>
           <small class="text-muted">${p.codigo_barra || 'Sin barras'}</small>
@@ -69,12 +79,29 @@ function renderProductsTable(products) {
         <td><strong style="${styleText}">${p.stock_actual}</strong></td>
         <td><span class="${stockClass}" style="${styleText}">${stockStatus}</span></td>
         <td class="actions-cell">
+          <button class="btn-icon-secondary" onclick="toggleProductStatus(${p.id}, '${p.estado}')" title="${toggleTitle}">
+            <span class="material-icons-round" style="font-size:24px; ${toggleColor}">${toggleIcon}</span>
+          </button>
           <button class="btn-icon-secondary" onclick="openEditProductModal(${p.id})" title="Editar"><span class="material-icons-round" style="font-size:18px;">edit</span></button>
           <button class="btn-icon-secondary" onclick="handleDeleteProduct(${p.id})" title="Eliminar"><span class="material-icons-round" style="font-size:18px; color:var(--color-primary);">delete</span></button>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+async function toggleProductStatus(id, currentStatus) {
+  try {
+    const res = await apiFetch(`/api/products/${id}/toggle-status`, {
+      method: 'PATCH'
+    });
+    if (res.success) {
+      showToast(`Estado del producto cambiado a ${res.estado.toUpperCase()}`, 'success');
+      loadProductsERP();
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 // Abrir modal de creación

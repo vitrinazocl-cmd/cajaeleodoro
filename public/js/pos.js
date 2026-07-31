@@ -116,7 +116,7 @@ function renderPOSProductsGrid(categoryFilter = 'all', searchQuery = '') {
   const gridContainer = document.getElementById('pos-products-list');
   if (!gridContainer) return;
 
-  let filtered = AppState.products;
+  let filtered = AppState.products ? AppState.products.filter(p => p.estado !== 'agotado') : [];
 
   // Filtrar por Categoría
   if (categoryFilter !== 'all') {
@@ -180,8 +180,8 @@ function addProductToCartById(id) {
   const product = AppState.products.find(p => p.id === id);
   if (!product) return;
 
-  if (product.stock_actual <= 0) {
-    showToast('El producto seleccionado no cuenta con stock disponible.', 'error');
+  if (product.estado === 'agotado' || product.stock_actual <= 0) {
+    showToast('El producto seleccionado se encuentra agotado o sin stock.', 'error');
     return;
   }
 

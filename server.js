@@ -270,6 +270,29 @@ app.post('/api/products', authenticateToken, requireRole(['Administrador', 'Supe
   }
 });
 
+app.patch('/api/products/:id/toggle-status', authenticateToken, requireRole(['Administrador', 'Supervisor', 'Bodega']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const check = await db.query('SELECT estado, nombre FROM productos WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado.' });
+    }
+    
+    const currentStatus = check.rows[0].estado || 'activo';
+    const newStatus = currentStatus === 'activo' ? 'agotado' : 'activo';
+    
+    await db.query('UPDATE productos SET estado = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newStatus, id]);
+    
+    await registerAudit(req.user.id, 'CAMBIO_ESTADO_PRODUCTO', 'productos', id, currentStatus, newStatus, req.ip);
+    await registerLog('INFO', `Producto '${check.rows[0].nombre}' cambiado a ${newStatus.toUpperCase()}`, `ID: ${id}`);
+    
+    res.json({ success: true, estado: newStatus });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al cambiar estado del producto.' });
+  }
+});
+
 app.put('/api/products/:id', authenticateToken, requireRole(['Administrador', 'Supervisor', 'Bodega']), async (req, res) => {
   const { id } = req.params;
   const { codigo, sku, codigo_barra, nombre, descripcion, categoria_id, marca, proveedor_id, precio_costo, precio_venta, stock_minimo, imagen_url } = req.body;
@@ -1316,12 +1339,20 @@ app.use((err, req, res, next) => {
 });
 
 // INICIAR SERVIDOR
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n======================================================`);
   console.log(`🚀 SERVIDOR ACTIVO EN: http://localhost:${PORT}`);
   console.log(`💼 EMPRESA: ELEODORO EL GRANDE DISTRIBUIDORA`);
   console.log(`🛡️  SEGURIDAD: JWT + Rate Limiting + CSP Activo`);
   console.log(`======================================================\n`);
+  
+  // Asegurar existencia de la columna 'estado' en la tabla de productos para el toggle activo/agotado
+  try {
+    await db.query("ALTER TABLE productos ADD COLUMN estado VARCHAR(20) DEFAULT 'activo'");
+    console.log('[DB] Columna de estado verificada/creada en productos.');
+  } catch (err) {
+    // Ignorar error si la columna ya existía
+  }
   
   // Ejecutar importación automática si el catálogo está vacío
   autoImportCatalog();
@@ -1329,9 +1360,11 @@ app.listen(PORT, () => {
 
 async function autoImportCatalog() {
   try {
-    const check = await db.query('SELECT COUNT(*) as count FROM productos');
-    const count = parseInt(check.rows[0].count) || 0;
-    if (count < 10) {
+    // Comprobar si el producto 'CATUNSG16' ya existe para saber si el catálogo real está cargado
+    const check = await db.query("SELECT id FROM productos WHERE codigo = $1", ["CATUNSG16"]);
+    const hasRealCatalog = check.rows.length > 0;
+    
+    if (!hasRealCatalog) {
       console.log('[DB] El catálogo en base de datos está vacío o incompleto. Iniciando importación automática...');
       
       const catalogoPath = path.join(__dirname, 'database', 'catalogo.js');
@@ -1378,6 +1411,15 @@ async function autoImportCatalog() {
         await db.query('DELETE FROM movimientos_inventario');
         await db.query('DELETE FROM inventario');
         await db.query('DELETE FROM productos');
+
+        // Reiniciar secuencias de ID autoincrementales en Postgres para evitar colisiones
+        if (db.getMode() === 'POSTGRES') {
+          try {
+            await db.query("ALTER SEQUENCE productos_id_seq RESTART WITH 1");
+          } catch (seqErr) {
+            console.warn('[DB] No se pudo reiniciar secuencia productos_id_seq:', seqErr.message);
+          }
+        }
 
         // 3. Insertar productos
         for (let i = 0; i < oldProducts.length; i++) {
