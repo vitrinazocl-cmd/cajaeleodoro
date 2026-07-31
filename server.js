@@ -1275,4 +1275,127 @@ app.listen(PORT, () => {
   console.log(`💼 EMPRESA: ELEODORO EL GRANDE DISTRIBUIDORA`);
   console.log(`🛡️  SEGURIDAD: JWT + Rate Limiting + CSP Activo`);
   console.log(`======================================================\n`);
+  
+  // Ejecutar importación automática si el catálogo está vacío
+  autoImportCatalog();
 });
+
+async function autoImportCatalog() {
+  try {
+    const check = await db.query('SELECT COUNT(*) as count FROM productos');
+    const count = parseInt(check.rows[0].count) || 0;
+    if (count < 10) {
+      console.log('[DB] El catálogo en base de datos está vacío o incompleto. Iniciando importación automática...');
+      
+      const catalogoPath = path.join(__dirname, 'database', 'catalogo.js');
+      if (fs.existsSync(catalogoPath)) {
+        const oldProducts = require(catalogoPath);
+        console.log(`[DB] Importando ${oldProducts.length} productos reales desde catalogo.js...`);
+        
+        // 1. Obtener o crear categorías
+        const categoryMap = new Map();
+        const rawCategories = [...new Set(oldProducts.map(p => p.category).filter(Boolean))];
+
+        for (const rawCat of rawCategories) {
+          const cleanName = cleanCategory(rawCat);
+          const catCheck = await db.query('SELECT id FROM categorias WHERE nombre = $1', [cleanName]);
+          let catId;
+          
+          if (catCheck.rows.length > 0) {
+            catId = catCheck.rows[0].id;
+          } else {
+            const catInsert = await db.query(
+              'INSERT INTO categorias (nombre, descripcion) VALUES ($1, $2) RETURNING id',
+              [cleanName, `Categoría de productos ${cleanName}`]
+            );
+            catId = catInsert.rows[0].id;
+          }
+          categoryMap.set(rawCat, catId);
+        }
+
+        // 2. Obtener o crear proveedor
+        let supplierId;
+        const supCheck = await db.query('SELECT id FROM proveedores WHERE rut_o_nit = $1', ['90.000.000-1']);
+        if (supCheck.rows.length > 0) {
+          supplierId = supCheck.rows[0].id;
+        } else {
+          const supInsert = await db.query(
+            `INSERT INTO proveedores (rut_o_nit, nombre, contacto, telefono, email, direccion)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+            ['90.000.000-1', 'Proveedor Importaciones Eleodoro', 'Contacto Central', '+56223456789', 'central@eleodoroprov.cl', 'Bodegas Centrales Distribuidora']
+          );
+          supplierId = supInsert.rows[0].id;
+        }
+
+        // Limpiar productos viejos para evitar duplicación
+        await db.query('DELETE FROM movimientos_inventario');
+        await db.query('DELETE FROM inventario');
+        await db.query('DELETE FROM detalle_ventas');
+        await db.query('DELETE FROM ventas');
+        await db.query('DELETE FROM productos');
+
+        // 3. Insertar productos
+        for (let i = 0; i < oldProducts.length; i++) {
+          const p = oldProducts[i];
+          const categoryId = categoryMap.get(p.category) || null;
+          const codigo = p.id;
+          const sku = `SKU-${p.id}`;
+          const barcode = '780' + String(i).padStart(10, '0');
+          const nombre = p.name;
+          const precioVenta = parseFloat(p.price);
+          const precioCosto = Math.round(precioVenta * 0.65);
+          const margen = 35.00;
+          const stockActual = Math.floor(Math.random() * 91) + 30;
+          const stockMinimo = 10;
+          const imagenUrl = p.image ? `/${p.image}` : '';
+          const descripcion = `Producto importado de www.eleodoroelgrande.cl. Sabores/Variaciones: ${p.flavors ? p.flavors.join(', ') : 'Ninguno'}.`;
+          const marca = formatName(p.category);
+
+          const prodInsert = await db.query(
+            `INSERT INTO productos 
+             (codigo, sku, codigo_barra, nombre, descripcion, categoria_id, marca, proveedor_id, precio_costo, precio_venta, margen, stock_actual, stock_minimo, imagen_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             RETURNING id`,
+            [codigo, sku, barcode, nombre, descripcion, categoryId, marca, supplierId, precioCosto, precioVenta, margen, stockActual, stockMinimo, imagenUrl]
+          );
+
+          const newProductId = prodInsert.rows[0].id;
+
+          await db.query(
+            `INSERT INTO inventario (producto_id, stock_actual, stock_minimo, ubicacion)
+             VALUES ($1, $2, $3, $4)`,
+            [newProductId, stockActual, stockMinimo, 'Bodega Principal A']
+          );
+
+          await db.query(
+            `INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, motivo, usuario_id)
+             VALUES ($1, 'ingreso_ajuste', $2, 'Carga de stock inicial catálogo www.eleodoroelgrande.cl', 1)`,
+            [newProductId, stockActual]
+          );
+        }
+        console.log(`[DB] Catálogo de ${oldProducts.length} productos reales importado con éxito.`);
+      } else {
+        console.warn(`[DB] No se encontró el archivo de catálogo en ${catalogoPath}`);
+      }
+    }
+  } catch (err) {
+    console.error('[DB] Error durante la importación automática de catálogo:', err.message);
+  }
+}
+
+function formatName(str) {
+  if (!str) return '';
+  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function cleanCategory(cat) {
+  if (!cat) return 'Otros';
+  let c = cat.toUpperCase().trim();
+  if (c.includes('ENERG')) return 'Energéticas';
+  if (c === 'AGUA') return 'Aguas y Aguas Saborizadas';
+  if (c === 'BEBIDAS') return 'Bebidas Gaseosas';
+  if (c === 'CERVEZA') return 'Cervezas';
+  if (c === 'LICORES') return 'Licores y Destilados';
+  if (c === 'PROMOCIONES') return 'Promociones Especiales';
+  return formatName(c);
+}

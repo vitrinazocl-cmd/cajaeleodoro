@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./connection');
 
-const OLD_CATALOG_PATH = 'C:\\Users\\pc\\Desktop\\distribuidora2 (2)\\distribuidora2\\catalogo.js';
+const OLD_CATALOG_PATH = path.join(__dirname, 'catalogo.js');
 
 // Capitalizar palabras
 function formatName(str) {
