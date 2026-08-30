@@ -17,7 +17,8 @@
     "nodemailer": "^9.0.3",
     "pdfkit": "^0.19.1",
     "pg": "^8.11.5",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
   },
   "author": "Harvard Software Architect",
   "license": "ISC"

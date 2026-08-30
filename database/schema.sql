@@ -254,3 +254,36 @@ INSERT INTO inventario (producto_id, stock_actual, stock_minimo, ubicacion) VALU
 (5, 150, 20, 'Cámara Frío 2'),
 (6, 80, 10, 'Pasillo C - Estante 4')
 ON CONFLICT (producto_id) DO NOTHING;
+
+-- 14. Tabla de Guías de Despacho (SII)
+CREATE TABLE IF NOT EXISTS guias_despacho (
+    id SERIAL PRIMARY KEY,
+    folio VARCHAR(50) UNIQUE NOT NULL,
+    fecha_emision TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_traslado TIMESTAMP NOT NULL,
+    usuario_id INT REFERENCES usuarios(id) ON DELETE SET NULL,
+    cliente_id INT REFERENCES clientes(id) ON DELETE SET NULL,
+    tipo_traslado VARCHAR(100) NOT NULL,
+    patente_vehiculo VARCHAR(20),
+    rut_chofer VARCHAR(20),
+    nombre_chofer VARCHAR(150),
+    direccion_despacho TEXT NOT NULL,
+    comuna_despacho VARCHAR(100),
+    subtotal DECIMAL(12,2) NOT NULL,
+    iva DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. Tabla de Detalle de Guías de Despacho
+CREATE TABLE IF NOT EXISTS detalle_guias_despacho (
+    id SERIAL PRIMARY KEY,
+    guia_id INT REFERENCES guias_despacho(id) ON DELETE CASCADE,
+    producto_id INT REFERENCES productos(id) ON DELETE RESTRICT,
+    cantidad INT NOT NULL CHECK (cantidad > 0),
+    precio_unitario DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_guias_despacho_cliente ON guias_despacho(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_detalle_guias_despacho_guia ON detalle_guias_despacho(guia_id);

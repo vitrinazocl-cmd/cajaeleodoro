@@ -26,7 +26,7 @@
   <!-- ==========================================
        PANTALLA DE AUTENTICACIÓN (LOGIN GLASSMORPHISM)
        ========================================== -->
-  <div id="login-container" class="login-view-active">
+  <div id="login-container" class="login-view-hidden">
     <div class="login-card">
       <div class="login-logo-area">
         <!-- SVG Corporativo Premium: Gorila con gafas de sol y corona (Eleodoro El Grande) -->
@@ -67,9 +67,9 @@
           <input type="text" id="login-username" placeholder="Usuario" required autocomplete="username">
           <label for="login-username">Usuario</label>
         </div>
-        <div class="input-group">
+        <div class="input-group" style="display: none;">
           <span class="material-icons-round input-icon">lock</span>
-          <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
+          <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
           <label for="login-password">Contraseña</label>
         </div>
         <div class="login-error-msg" id="login-error">Usuario o clave incorrectos.</div>
@@ -84,7 +84,7 @@
   <!-- ==========================================
        APLICACIÓN PRINCIPAL (SIDEBAR + MAIN CONTENT)
        ========================================== -->
-  <div id="app-container" class="app-view-hidden">
+  <div id="app-container" class="">
     
     <!-- BARRA LATERAL (SIDEBAR COLAPSABLE) -->
     <aside id="app-sidebar" class="sidebar">
@@ -116,6 +116,10 @@
         <a href="#erp-ventas" class="nav-item" id="nav-erp-ventas">
           <span class="material-icons-round nav-icon">receipt_long</span>
           <span class="nav-label">Venta / Cierre</span>
+        </a>
+        <a href="#erp-despachos" class="nav-item" id="nav-erp-despachos">
+          <span class="material-icons-round nav-icon">local_shipping</span>
+          <span class="nav-label">Guías de Despacho</span>
         </a>
         <a href="#erp-productos" class="nav-item" id="nav-erp-productos">
           <span class="material-icons-round nav-icon">inventory_2</span>
@@ -560,6 +564,41 @@
         </section>
 
         <!-- ==========================================
+             VISTA: GUÍAS DE DESPACHO
+             ========================================== -->
+        <section id="view-erp-despachos" class="app-view">
+          <div class="erp-container">
+            <div class="table-header-actions">
+              <div class="search-box">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="erp-despachos-search" placeholder="Buscar guías por folio o cliente...">
+              </div>
+              <button class="btn-primary" id="btn-erp-new-despacho">
+                <span class="material-icons-round">add_circle</span> Emitir Guía de Despacho
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="erp-table">
+                <thead>
+                  <tr>
+                    <th>Folio</th>
+                    <th>Cliente</th>
+                    <th>RUT Cliente</th>
+                    <th>Fecha Emisión</th>
+                    <th>Tipo Traslado</th>
+                    <th>Total ($)</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="erp-despachos-table-body">
+                  <tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================
              VISTA 5: CLIENTES CRUD
              ========================================== -->
         <section id="view-erp-clientes" class="app-view">
@@ -571,6 +610,9 @@
               </div>
               <button class="btn-primary" id="btn-erp-new-client">
                 <span class="material-icons-round">person_add</span> Registrar Cliente
+              </button>
+              <button class="btn-secondary" id="btn-erp-export-clients" style="display: flex; align-items: center; gap: 8px; background-color: #2e7d32; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                <span class="material-icons-round" style="font-size: 20px;">download</span> Exportar Excel
               </button>
             </div>
             <div class="table-responsive">
@@ -1127,6 +1169,110 @@
     </div>
   </div>
 
+  <!-- Modal: Emisión Guía de Despacho -->
+  <div id="modal-despacho" class="modal-overlay">
+    <div class="modal-card modal-large" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h3>Emitir Guía de Despacho (SII)</h3>
+        <button class="btn-icon modal-close-btn"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="despacho-form">
+          <!-- Datos Receptor -->
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="form-group">
+              <label for="des-cliente-select">Cliente Receptor *</label>
+              <select id="des-cliente-select" class="form-control" required style="width:100%; padding:8px;"></select>
+            </div>
+            <div class="form-group">
+              <label for="des-tipo-traslado">Tipo de Traslado *</label>
+              <select id="des-tipo-traslado" class="form-control" required style="width:100%; padding:8px;">
+                <option value="Venta">Venta (Constituye venta)</option>
+                <option value="Traslado">Traslado interno (No constituye venta)</option>
+                <option value="Consignación">Consignación</option>
+                <option value="Devolución">Devolución de mercaderías</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="des-direccion">Dirección de Despacho *</label>
+              <input type="text" id="des-direccion" class="form-control" placeholder="Dirección destino" required style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="des-comuna">Comuna de Despacho</label>
+              <input type="text" id="des-comuna" class="form-control" placeholder="Comuna destino" style="width:100%;">
+            </div>
+          </div>
+
+          <!-- Datos Transporte -->
+          <h4 style="margin: 15px 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-weight: 600;">Datos de Transporte</h4>
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="form-group">
+              <label for="des-patente">Patente Vehículo</label>
+              <input type="text" id="des-patente" class="form-control" placeholder="ABCD-12" style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="des-chofer-nombre">Nombre Chofer</label>
+              <input type="text" id="des-chofer-nombre" class="form-control" placeholder="Nombre completo" style="width:100%;">
+            </div>
+            <div class="form-group">
+              <label for="des-chofer-rut">RUT Chofer</label>
+              <input type="text" id="des-chofer-rut" class="form-control" placeholder="12.345.678-9" style="width:100%;">
+            </div>
+          </div>
+
+          <!-- Items Detail -->
+          <h4 style="margin: 15px 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-weight: 600;">Detalle de Mercaderías</h4>
+          <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px;">
+            <div class="form-group" style="flex: 2;">
+              <label for="des-producto-select">Producto</label>
+              <select id="des-producto-select" class="form-control" style="width:100%; padding:8px;"></select>
+            </div>
+            <div class="form-group" style="width: 100px;">
+              <label for="des-cantidad">Cantidad</label>
+              <input type="number" id="des-cantidad" class="form-control" value="1" min="1" style="width:100%;">
+            </div>
+            <div class="form-group" style="width: 120px;">
+              <label for="des-precio">Precio Unitario ($)</label>
+              <input type="number" id="des-precio" class="form-control" min="0" style="width:100%;">
+            </div>
+            <button type="button" class="btn-secondary" id="btn-despacho-add-item" style="padding: 10px 15px; height: 38px;">Agregar</button>
+          </div>
+
+          <!-- Table of items -->
+          <div class="table-responsive small-table" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+            <table class="erp-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio Unitario</th>
+                  <th>Subtotal</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="despacho-items-table-body">
+                <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No se han agregado productos.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Summary -->
+          <div style="display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 15px; font-size: 0.9rem; gap: 4px;">
+            <div>Neto: <strong id="despacho-summary-neto">$0</strong></div>
+            <div>IVA (19%): <strong id="despacho-summary-iva">$0</strong></div>
+            <div style="font-size: 1.1rem; color: var(--color-primary);">Total: <strong id="despacho-summary-total">$0</strong></div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary modal-close-btn">Cancelar</button>
+            <button type="submit" class="btn-primary">Generar Guía de Despacho</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 8: Registrar Proveedor -->
   <div id="modal-supplier" class="modal-overlay">
     <div class="modal-card">
@@ -1311,5 +1457,6 @@
   <script src="js/pos.js"></script>
   <script src="js/erp.js"></script>
   <script src="js/bi.js"></script>
+  <script src="js/despachos.js"></script>
 </body>
 </html>

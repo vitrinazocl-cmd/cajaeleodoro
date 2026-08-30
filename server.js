@@ -102,22 +102,27 @@ async function registerLog(nivel, mensaje, contexto) {
   }
 }
 
-// MIDDLEWARE DE AUTENTICACIÓN JWT
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+// MIDDLEWARE DE AUTENTICACIÓN JWT (AUTO-INICIADO EN MODO SIN LOGIN)
+let defaultUserCached = null;
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token de acceso no proporcionado.' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Token inválido o expirado.' });
+async function authenticateToken(req, res, next) {
+  if (!defaultUserCached) {
+    try {
+      const userRes = await db.query(
+        "SELECT u.*, r.nombre as rol_nombre FROM usuarios u LEFT JOIN roles r ON u.rol_id = r.id WHERE u.username = 'eleodoro'"
+      );
+      if (userRes.rows.length > 0) {
+        const u = userRes.rows[0];
+        defaultUserCached = { id: u.id, username: u.username, nombre: u.nombre, rol_nombre: u.rol_nombre };
+      } else {
+        defaultUserCached = { id: 1, username: 'eleodoro', nombre: 'Eleodoro El Grande', rol_nombre: 'Administrador' };
+      }
+    } catch (e) {
+      defaultUserCached = { id: 1, username: 'eleodoro', nombre: 'Eleodoro El Grande', rol_nombre: 'Administrador' };
     }
-    req.user = user;
-    next();
-  });
+  }
+  req.user = defaultUserCached;
+  next();
 }
 
 // MIDDLEWARE DE VERIFICACIÓN DE ROL
@@ -135,49 +140,22 @@ function requireRole(rolesPermitidos) {
 // -------------------------------------------------------------
 
 app.post('/api/auth/login', rateLimiter(true), async (req, res) => {
-  const { username, password } = req.body;
-  
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: 'Usuario y clave requeridos.' });
-  }
-
   try {
     const userRes = await db.query(
       `SELECT u.*, r.nombre as rol_nombre 
        FROM usuarios u 
        LEFT JOIN roles r ON u.rol_id = r.id 
-       WHERE u.username = $1 AND u.estado = 'activo'`, 
-      [username]
+       WHERE u.username = 'eleodoro'`
     );
 
-    if (userRes.rows.length === 0) {
-      await registerLog('WARNING', `Intento de login fallido para usuario: ${username}`, `IP: ${req.ip}`);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Freno artificial para ralentizar ataques de fuerza bruta
-      return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+    let user = userRes.rows[0];
+    if (!user) {
+      user = { id: 1, username: 'eleodoro', nombre: 'Eleodoro El Grande', rol_nombre: 'Administrador', email: 'contacto@eleodoro.cl' };
     }
-
-    const user = userRes.rows[0];
-    const passwordMatch = bcrypt.compareSync(password, user.password_hash);
-
-    if (!passwordMatch) {
-      await registerLog('WARNING', `Intento de login con clave errónea para usuario: ${username}`, `IP: ${req.ip}`);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Freno artificial para ralentizar ataques de fuerza bruta
-      return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
-    }
-
-    // Firmar Token JWT
-    const token = jwt.sign(
-      { id: user.id, username: user.username, nombre: user.nombre, rol_nombre: user.rol_nombre },
-      JWT_SECRET,
-      { expiresIn: '8h' }
-    );
-
-    await registerAudit(user.id, 'LOGIN', 'usuarios', user.id, null, 'Sesión iniciada', req.ip);
-    await registerLog('INFO', `Login exitoso de usuario: ${username}`, `ID: ${user.id}`);
 
     res.json({
       success: true,
-      token,
+      token: 'dummy-token-eleodoro',
       user: {
         id: user.id,
         username: user.username,
@@ -187,10 +165,20 @@ app.post('/api/auth/login', rateLimiter(true), async (req, res) => {
         db_mode: db.getMode()
       }
     });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Error interno del servidor en login.' });
+    console.error('Error en login bypass:', err);
+    res.json({
+      success: true,
+      token: 'dummy-token-eleodoro',
+      user: {
+        id: 1,
+        username: 'eleodoro',
+        nombre: 'Eleodoro El Grande',
+        email: 'contacto@eleodoro.cl',
+        rol: 'Administrador',
+        db_mode: db.getMode()
+      }
+    });
   }
 });
 
@@ -1326,6 +1314,203 @@ app.get('/api/admin/logs', authenticateToken, requireRole(['Administrador']), as
     res.json({ success: true, logs: logRes.rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al consultar logs.' });
+  }
+});
+
+// -------------------------------------------------------------
+// APIS DE GUÍAS DE DESPACHO (SII)
+// -------------------------------------------------------------
+
+app.get('/api/despachos', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT g.*, c.nombre as cliente_nombre, c.rut_o_nit as cliente_rut, u.nombre as usuario_nombre
+       FROM guias_despacho g
+       LEFT JOIN clientes c ON g.cliente_id = c.id
+       LEFT JOIN usuarios u ON g.usuario_id = u.id
+       ORDER BY g.fecha_emision DESC`
+    );
+    res.json({ success: true, despachos: result.rows });
+  } catch (err) {
+    console.error('Error al listar despachos:', err);
+    res.status(500).json({ success: false, message: 'Error al listar despachos en el servidor.' });
+  }
+});
+
+app.get('/api/despachos/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const gdRes = await db.query(
+      `SELECT g.*, c.nombre as cliente_nombre, c.rut_o_nit as cliente_rut, c.email as cliente_email
+       FROM guias_despacho g
+       LEFT JOIN clientes c ON g.cliente_id = c.id
+       WHERE g.id = $1`,
+      [id]
+    );
+    if (gdRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Guía de despacho no encontrada.' });
+    }
+    const itemsRes = await db.query(
+      `SELECT d.*, p.nombre as producto_nombre, p.codigo as producto_codigo
+       FROM detalle_guias_despacho d
+       LEFT JOIN productos p ON d.producto_id = p.id
+       WHERE d.guia_id = $1`,
+      [id]
+    );
+    res.json({ success: true, despacho: gdRes.rows[0], items: itemsRes.rows });
+  } catch (err) {
+    console.error('Error al obtener detalle del despacho:', err);
+    res.status(500).json({ success: false, message: 'Error interno al obtener detalle del despacho.' });
+  }
+});
+
+app.post('/api/despachos', authenticateToken, async (req, res) => {
+  const {
+    cliente_id,
+    fecha_traslado,
+    tipo_traslado,
+    patente_vehiculo,
+    rut_chofer,
+    nombre_chofer,
+    direccion_despacho,
+    comuna_despacho,
+    items
+  } = req.body;
+
+  if (!cliente_id || !direccion_despacho || !items || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Faltan datos obligatorios para emitir la guía de despacho.' });
+  }
+
+  // Generar folio correlativo único
+  const folioNum = Date.now().toString().slice(-6);
+  const folio = `GD-${folioNum}`;
+
+  try {
+    let subtotal = 0;
+    items.forEach(item => {
+      subtotal += item.cantidad * item.precio_unitario;
+    });
+    const iva = Math.round(subtotal * 0.19);
+    const total = subtotal + iva;
+
+    const isPostgres = db.getMode() === 'POSTGRES';
+    if (isPostgres) {
+      await db.query('BEGIN');
+    }
+
+    // 1. Insertar encabezado de la Guía
+    const gdInsert = await db.query(
+      `INSERT INTO guias_despacho 
+       (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id`,
+      [folio, fecha_traslado || new Date(), req.user.id || 1, cliente_id, tipo_traslado || 'Venta', patente_vehiculo || '', rut_chofer || '', nombre_chofer || '', direccion_despacho, comuna_despacho || '', subtotal, iva, total]
+    );
+
+    const gdId = gdInsert.rows[0].id;
+
+    // 2. Insertar detalles, descontar inventario y registrar Kardex
+    const itemsExtended = [];
+    for (const item of items) {
+      const itemSubtotal = item.cantidad * item.precio_unitario;
+      
+      // Insertar detalle
+      await db.query(
+        `INSERT INTO detalle_guias_despacho (guia_id, producto_id, cantidad, precio_unitario, subtotal)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [gdId, item.producto_id, item.cantidad, item.precio_unitario, itemSubtotal]
+      );
+
+      // Descontar inventario
+      await db.query(
+        `UPDATE productos SET stock_actual = stock_actual - $1 WHERE id = $2`,
+        [item.cantidad, item.producto_id]
+      );
+      await db.query(
+        `UPDATE inventario SET stock_actual = stock_actual - $1, ultima_actualizacion = CURRENT_TIMESTAMP WHERE producto_id = $2`,
+        [item.cantidad, item.producto_id]
+      );
+
+      // Registrar movimiento Kardex como egreso_venta
+      await db.query(
+        `INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, motivo, usuario_id)
+         VALUES ($1, 'egreso_venta', $2, $3, $4)`,
+        [item.producto_id, item.cantidad, `Salida por despacho con Guía Folio ${folio}`, req.user.id || 1]
+      );
+
+      const prodRes = await db.query('SELECT nombre, codigo FROM productos WHERE id = $1', [item.producto_id]);
+      const prod = prodRes.rows[0];
+
+      itemsExtended.push({
+        producto_id: item.producto_id,
+        codigo: prod ? prod.codigo : 'N/A',
+        nombre: prod ? prod.nombre : 'Producto',
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        subtotal: itemSubtotal
+      });
+    }
+
+    if (isPostgres) {
+      await db.query('COMMIT');
+    }
+
+    // 3. Obtener info del cliente para el PDF
+    const cliRes = await db.query('SELECT nombre, rut_o_nit, email FROM clientes WHERE id = $1', [cliente_id]);
+    const clientInfo = cliRes.rows[0] || { nombre: 'Cliente General', rut_o_nit: '77.777.777-7', email: '' };
+
+    // 4. Generar PDF de Despacho
+    const despachoObj = {
+      id: gdId,
+      folio,
+      fecha_emision: new Date(),
+      fecha_traslado: fecha_traslado || new Date(),
+      tipo_traslado: tipo_traslado || 'Venta',
+      patente_vehiculo,
+      rut_chofer,
+      nombre_chofer,
+      direccion_despacho,
+      comuna_despacho,
+      subtotal,
+      iva,
+      total
+    };
+
+    await notifications.generateDespachoPDF(despachoObj, itemsExtended, clientInfo);
+
+    // Registrar auditoría
+    await registerAudit(req.user.id || 1, 'EMISION_GUIA_DESPACHO', 'guias_despacho', gdId, null, `Folio: ${folio}, Total: ${total}`, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Guía de despacho emitida correctamente.',
+      despacho_id: gdId,
+      folio: folio,
+      pdf_url: `/api/despachos/${gdId}/pdf`
+    });
+
+  } catch (err) {
+    console.error('Error al registrar despacho:', err);
+    res.status(500).json({ success: false, message: 'Error interno al registrar el despacho.' });
+  }
+});
+
+app.get('/api/despachos/:id/pdf', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const gdRes = await db.query('SELECT folio FROM guias_despacho WHERE id = $1', [id]);
+    if (gdRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Guía de despacho no encontrada.' });
+    }
+    const folio = gdRes.rows[0].folio;
+    const pdfPath = path.join(__dirname, 'exports', 'despachos', `${folio}.pdf`);
+    if (!fs.existsSync(pdfPath)) {
+      return res.status(404).json({ success: false, message: 'Archivo PDF no disponible en el servidor.' });
+    }
+    res.download(pdfPath, `${folio}.pdf`);
+  } catch (err) {
+    console.error('Error al descargar PDF de despacho:', err);
+    res.status(500).json({ success: false, message: 'Error al procesar descarga de PDF.' });
   }
 });
 

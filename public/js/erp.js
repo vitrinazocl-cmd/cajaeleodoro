@@ -575,6 +575,9 @@ document.getElementById('btn-erp-new-client').addEventListener('click', () => {
   showModal('modal-client');
 });
 
+// Listener de Exportación a Excel de Clientes
+document.getElementById('btn-erp-export-clients').addEventListener('click', exportClientsToCSV);
+
 document.getElementById('client-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('client-id-input').value;
@@ -635,6 +638,44 @@ async function handleDeleteClient(id) {
       showToast(err.message, 'error');
     }
   }
+}
+
+// Exportar Clientes a Excel (CSV con formato compatible)
+function exportClientsToCSV() {
+  if (!AppState.customers || AppState.customers.length === 0) {
+    showToast('No hay clientes cargados para exportar.', 'warning');
+    return;
+  }
+
+  // BOM para compatibilidad automática de Excel en español
+  let csv = "\ufeffRUT;Nombre Comercial;Teléfono;Email;Dirección\n";
+  AppState.customers.forEach(c => {
+    const rut = c.rut_o_nit || '';
+    const nombre = c.nombre || '';
+    const telefono = c.telefono || 'N/A';
+    const email = c.email || 'N/A';
+    const direccion = c.direccion || 'N/A';
+    
+    // Escapar caracteres problemáticos
+    const safeNombre = nombre.replace(/"/g, '""').replace(/;/g, ',');
+    const safeDir = direccion.replace(/"/g, '""').replace(/;/g, ',');
+
+    csv += `${rut};"${safeNombre}";${telefono};${email};"${safeDir}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Listado_Clientes_${new Date().toLocaleDateString('es-CL').replace(/\//g, '-')}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast('Listado de clientes exportado con éxito.', 'success');
 }
 
 // -------------------------------------------------------------

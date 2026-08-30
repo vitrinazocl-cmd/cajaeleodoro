@@ -2,8 +2,8 @@
 // Lógica Principal de Cliente, Enrutador SPA, Estado Global, IndexedDB y Comunicaciones API
 
 const AppState = {
-  token: localStorage.getItem('token') || null,
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  token: localStorage.getItem('token') || 'dummy-token-eleodoro',
+  user: JSON.parse(localStorage.getItem('user')) || { id: 1, username: 'eleodoro', nombre: 'Eleodoro El Grande', rol: 'Administrador', db_mode: 'SQLite' },
   activeView: 'pos',
   dbMode: 'SQLite',
   products: [],
@@ -106,6 +106,7 @@ function navigateTo(viewId) {
   const titleMap = {
     'pos': 'Caja Registradora (POS)',
     'erp-ventas': 'Registro de Ventas & Cierre de Caja',
+    'erp-despachos': 'Guías de Despacho (SII)',
     'erp-productos': 'Inventario & Stock (ERP)',
     'bi-dashboard': 'Business Intelligence SAP Dashboard',
     'erp-compras': 'Órdenes de Compra & Recepción',
@@ -130,6 +131,9 @@ function triggerViewLoad(viewId) {
       break;
     case 'erp-ventas':
       if (typeof initSalesModule === 'function') initSalesModule();
+      break;
+    case 'erp-despachos':
+      if (typeof initDespachosModule === 'function') initDespachosModule();
       break;
     case 'erp-productos':
       if (typeof initERPModule === 'function') loadProductsERP();
@@ -199,7 +203,10 @@ function showToast(message, type = 'info') {
 // 5. AUTENTICACIÓN: LOGIN & LOGOUT
 // -------------------------------------------------------------
 async function handleLogin(e) {
-  e.preventDefault();
+  if (e && typeof e.preventDefault === 'function') {
+    e.preventDefault();
+  }
+  sessionStorage.removeItem('manual_logout');
   const usernameInput = document.getElementById('login-username');
   const passwordInput = document.getElementById('login-password');
   const errorMsg = document.getElementById('login-error');
@@ -242,19 +249,59 @@ async function handleLogin(e) {
   }
 }
 
-function logout() {
-  AppState.token = null;
-  AppState.user = null;
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+function logout(isManual) {
+  console.log('Intento de cierre de sesión interceptado (Modo sin login activo).');
+  if (!AppState.token || !AppState.user) {
+    AppState.token = 'dummy-token-eleodoro';
+    AppState.user = { id: 1, username: 'eleodoro', nombre: 'Eleodoro El Grande', rol: 'Administrador', db_mode: 'SQLite' };
+    localStorage.setItem('token', AppState.token);
+    localStorage.setItem('user', JSON.stringify(AppState.user));
+  }
+  document.getElementById('login-container').className = 'login-view-hidden';
+  document.getElementById('app-container').className = '';
+  showToast('Sesión permanente activa.', 'info');
+}
 
-  document.getElementById('login-container').className = 'login-view-active';
-  document.getElementById('app-container').className = 'app-view-hidden';
-  document.getElementById('login-username').value = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error').style.display = 'none';
+async function autoLogin() {
+  try {
+    const data = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'eleodoro' })
+    });
 
-  showToast('Sesión cerrada correctamente.', 'info');
+    if (data.success) {
+      AppState.token = data.token;
+      AppState.user = data.user;
+      AppState.dbMode = data.user.db_mode;
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Actualizar UI
+      document.getElementById('user-display-name').textContent = data.user.nombre;
+      document.getElementById('user-display-role').textContent = data.user.rol;
+      document.getElementById('db-mode-badge').textContent = data.user.db_mode;
+
+      // Ocultar Login y Mostrar App
+      document.getElementById('login-container').className = 'login-view-hidden';
+      document.getElementById('app-container').className = '';
+
+      showToast(`¡Bienvenido de vuelta, ${data.user.nombre}!`, 'success');
+      
+      // Ir a POS
+      navigateTo('pos');
+      
+      // Correr chequeo de stock inicial
+      checkStockAlerts();
+      // Chequeo periódico cada 5 minutos
+      setInterval(checkStockAlerts, 300000);
+    } else {
+      logout();
+    }
+  } catch (err) {
+    console.error('Error al iniciar sesión automáticamente:', err);
+    logout();
+  }
 }
 
 // -------------------------------------------------------------
@@ -430,6 +477,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listener para cerrar sesión
   document.getElementById('logout-btn').addEventListener('click', logout);
+
+  // Asegurar credenciales en localStorage en modo sin login
+  if (!localStorage.getItem('token') || !localStorage.getItem('user')) {
+    localStorage.setItem('token', AppState.token);
+    localStorage.setItem('user', JSON.stringify(AppState.user));
+  }
 
   // Verificar si hay token previo
   if (AppState.token && AppState.user) {
