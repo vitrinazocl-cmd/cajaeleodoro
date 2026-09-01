@@ -1630,7 +1630,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 
       if (isPostgres) await db.query('BEGIN');
 
-      const itemVendedor = firstRow.vendedor || firstRow.vendedor_nombre || 'COMERCIALIZADORA ELEODORO';
+      const itemVendedor = firstRow.vendedor || firstRow.VENDEDOR || firstRow.vendedor_nombre || firstRow.NOMBRE_VENDEDOR || firstRow.Vendedor || 'COMERCIALIZADORA ELEODORO';
 
       const gdInsertRes = await db.query(
         `INSERT INTO guias_despacho 
