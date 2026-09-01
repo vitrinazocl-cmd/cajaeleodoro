@@ -366,11 +366,12 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       }
       if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Arantxa Perez';
 
-      const emisorY = 85;
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
-      doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 14);
-      doc.fontSize(6.5).text('CASA MATRIZ: LAGUNA SUR #8383 PUDAHUEL | SUCURSAL: RENE OLIVA #1358 CERRO NAVIA, SANTIAGO', 35, emisorY + 24, { width: 330 });
-      doc.fontSize(7).font('Helvetica-Bold').fillColor('#222222').text('FONOS: +56 9 4969 2316  /  +56 9 5626 4496', 35, emisorY + 34, { width: 330 });
+      const emisorY = 70;
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
+      doc.fontSize(7).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 13);
+      doc.fontSize(6.5).fillColor('#333333').text('CASA MATRIZ: LAGUNA SUR #8383 PUDAHUEL', 35, emisorY + 23);
+      doc.text('SUCURSAL: RENE OLIVA #1358 CERRO NAVIA, SANTIAGO', 35, emisorY + 32);
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#111111').text('FONOS: +56 9 4969 2316  /  +56 9 5626 4496', 35, emisorY + 43);
 
       // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
       const infoY = 138;
