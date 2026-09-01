@@ -369,7 +369,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       const emisorY = 85;
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
       doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 14);
-      doc.text('LAGUNA SUR #8383 PUDAHUEL, SANTIAGO', 35, emisorY + 24);
+      doc.fontSize(6.8).text('CASA MATRIZ: LAGUNA SUR #8383 PUDAHUEL | SUCURSAL: RENE OLIVA #1358 CERRO NAVIA, SANTIAGO', 35, emisorY + 24, { width: 330 });
 
       // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
       const infoY = 138;
