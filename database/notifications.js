@@ -450,27 +450,30 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`: ${rawComDestino}`, 390, transpY + 34);
       doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
 
-      // --- 5. TABLA DE PRODUCTOS (HASTA 16 SKUs PER PAGE) ---
-      const tableY = transpY + transpH + 8;
-      const tableH = 18;
+      // --- 5. TABLA DE PRODUCTOS (HASTA 16 SKUs EN 1 HOJA) ---
+      const tableY = transpY + transpH + 6;
+      const tableH = 16;
       
       doc.rect(35, tableY, 535, tableH).fill('#000000');
       doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
-      doc.text('No.', 38, tableY + 5, { width: 25, align: 'center' });
-      doc.text('Código', 65, tableY + 5, { width: 45, align: 'left' });
-      doc.text('Detalle', 115, tableY + 5, { width: 230, align: 'left' });
-      doc.text('Cantidad', 350, tableY + 5, { width: 45, align: 'right' });
-      doc.text('U.M.', 400, tableY + 5, { width: 30, align: 'center' });
-      doc.text('Precio', 435, tableY + 5, { width: 40, align: 'right' });
-      doc.text('Descto', 480, tableY + 5, { width: 35, align: 'right' });
-      doc.text('Total', 520, tableY + 5, { width: 45, align: 'right' });
+      doc.text('No.', 38, tableY + 4, { width: 25, align: 'center' });
+      doc.text('Código', 65, tableY + 4, { width: 45, align: 'left' });
+      doc.text('Detalle', 115, tableY + 4, { width: 230, align: 'left' });
+      doc.text('Cantidad', 350, tableY + 4, { width: 45, align: 'right' });
+      doc.text('U.M.', 400, tableY + 4, { width: 30, align: 'center' });
+      doc.text('Precio', 435, tableY + 4, { width: 40, align: 'right' });
+      doc.text('Descto', 480, tableY + 4, { width: 35, align: 'right' });
+      doc.text('Total', 520, tableY + 4, { width: 45, align: 'right' });
 
       doc.fillColor('#000000').font('Helvetica').fontSize(7.5);
       let itemY = tableY + tableH;
 
-      items.forEach((item, index) => {
+      // Limitar a máximo 16 SKUs para asegurar formato estricto de 1 sola página
+      const pageItems = items.slice(0, 16);
+
+      pageItems.forEach((item, index) => {
         const lineNo = index + 1;
-        const rowH = 16;
+        const rowH = 14;
         if (index % 2 === 1) {
           doc.rect(35, itemY, 535, rowH).fill('#f7f7f7');
           doc.fillColor('#000000');
@@ -482,14 +485,14 @@ function generateDespachoPDF(despacho, items, clientInfo) {
         const descto = item.descuento || 0;
         const subtotal = item.subtotal || (item.cantidad * price - descto);
 
-        doc.text(String(lineNo), 38, itemY + 4, { width: 25, align: 'center' });
-        doc.text(String(item.codigo || '0'), 65, itemY + 4, { width: 45, align: 'left' });
-        doc.text(String(item.nombre || item.detalle || 'Producto'), 115, itemY + 4, { width: 230, ellipsis: true });
-        doc.text(qtyFormatted, 350, itemY + 4, { width: 45, align: 'right' });
-        doc.text(unit, 400, itemY + 4, { width: 30, align: 'center' });
-        doc.text(price.toLocaleString('es-CL'), 435, itemY + 4, { width: 40, align: 'right' });
-        doc.text(descto.toLocaleString('es-CL'), 480, itemY + 4, { width: 35, align: 'right' });
-        doc.text(subtotal.toLocaleString('es-CL'), 520, itemY + 4, { width: 45, align: 'right' });
+        doc.text(String(lineNo), 38, itemY + 3, { width: 25, align: 'center' });
+        doc.text(String(item.codigo || '0'), 65, itemY + 3, { width: 45, align: 'left' });
+        doc.text(String(item.nombre || item.detalle || 'Producto'), 115, itemY + 3, { width: 230, ellipsis: true });
+        doc.text(qtyFormatted, 350, itemY + 3, { width: 45, align: 'right' });
+        doc.text(unit, 400, itemY + 3, { width: 30, align: 'center' });
+        doc.text(price.toLocaleString('es-CL'), 435, itemY + 3, { width: 40, align: 'right' });
+        doc.text(descto.toLocaleString('es-CL'), 480, itemY + 3, { width: 35, align: 'right' });
+        doc.text(subtotal.toLocaleString('es-CL'), 520, itemY + 3, { width: 45, align: 'right' });
 
         itemY += rowH;
       });
@@ -497,68 +500,82 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.rect(35, itemY, 535, 0.5).stroke('#cccccc');
 
       // --- 6. SECCIÓN PIE Y TIMBRE SII ---
-      const footerY = Math.max(itemY + 10, 500);
+      const footerY = Math.max(itemY + 6, 506);
 
-      doc.font('Helvetica-Bold').fontSize(8.5);
+      doc.font('Helvetica-Bold').fontSize(8);
       doc.text('SON: PESOS.--', 35, footerY);
 
-      doc.font('Helvetica').fontSize(8);
+      doc.font('Helvetica').fontSize(7.5);
       doc.text('Cancelado por : ____________________ de: ___________ de: ___________', 260, footerY);
 
-      doc.rect(35, footerY + 18, 535, 35).lineWidth(0.5).stroke('#aaaaaa');
-      doc.font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Referencias:', 42, footerY + 23);
-      doc.font('Helvetica').fontSize(7.5);
-      doc.text(despacho.referencias || 'Devolución / Venta', 42, footerY + 36);
+      doc.rect(35, footerY + 14, 535, 26).lineWidth(0.5).stroke('#aaaaaa');
+      doc.font('Helvetica-Bold').fontSize(7);
+      doc.text('Referencias:', 42, footerY + 17);
+      doc.font('Helvetica').fontSize(7);
+      doc.text(despacho.referencias || 'Devolución / Venta', 42, footerY + 28);
 
       // Cuadro Timbre Electrónico SII (Izquierda)
-      const timbreY = footerY + 60;
-      doc.rect(35, timbreY, 250, 95).lineWidth(0.8).stroke('#000000');
+      const timbreY = footerY + 46;
+      doc.rect(35, timbreY, 250, 85).lineWidth(0.8).stroke('#000000');
       
       doc.save();
-      doc.translate(45, timbreY + 12);
+      doc.translate(45, timbreY + 8);
       doc.lineWidth(0.6).strokeColor('#000000');
       for (let i = 0; i < 230; i += 3) {
-        let height = 45;
+        let height = 40;
         if (i % 6 === 0) doc.moveTo(i, 0).lineTo(i, height).stroke();
         if (i % 9 === 0) doc.moveTo(i + 1, 0).lineTo(i + 1, height).stroke();
       }
       doc.restore();
 
       doc.fillColor('#000000').font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Timbre Electronico S.I.I.', 35, timbreY + 65, { width: 250, align: 'center' });
+      doc.text('Timbre Electronico S.I.I.', 35, timbreY + 56, { width: 250, align: 'center' });
       doc.font('Helvetica').fontSize(6.5);
-      doc.text('Resolución 80 del 22/08/2014   Verifique Documento: http://www.sii.cl', 35, timbreY + 77, { width: 250, align: 'center' });
+      doc.text('Resolución 80 del 22/08/2014   Verifique Documento: http://www.sii.cl', 35, timbreY + 68, { width: 250, align: 'center' });
 
       // Cuadro Forma de Pago y Montos Totales (Derecha)
-      doc.rect(295, timbreY, 130, 95).lineWidth(0.5).stroke('#aaaaaa');
+      doc.rect(295, timbreY, 130, 85).lineWidth(0.5).stroke('#aaaaaa');
       doc.font('Helvetica-Bold').fontSize(8);
       doc.text('Forma de Pago:', 300, timbreY + 8);
       doc.font('Helvetica').fontSize(7.5);
       doc.text(despacho.forma_pago || 'Crédito / Transferencia', 300, timbreY + 22);
 
-      doc.rect(430, timbreY, 140, 95).lineWidth(0.5).stroke('#aaaaaa');
+      doc.rect(430, timbreY, 140, 85).lineWidth(0.5).stroke('#aaaaaa');
       doc.font('Helvetica-Bold').fontSize(8.5);
       
       const subtotalVal = despacho.subtotal || items.reduce((acc, i) => acc + (i.subtotal || 0), 0);
       const ivaVal = despacho.iva || Math.round(subtotalVal * 0.19);
       const totalVal = despacho.total || (subtotalVal + ivaVal);
 
-      doc.text('Montos Totales', 435, timbreY + 8, { width: 130, align: 'center' });
+      doc.text('Montos Totales', 435, timbreY + 6, { width: 130, align: 'center' });
       doc.font('Helvetica').fontSize(8);
-      doc.text(`Neto:`, 438, timbreY + 30);
-      doc.text(`$ ${subtotalVal.toLocaleString('es-CL')}`, 480, timbreY + 30, { width: 85, align: 'right' });
+      doc.text(`Neto:`, 438, timbreY + 24);
+      doc.text(`$ ${subtotalVal.toLocaleString('es-CL')}`, 480, timbreY + 24, { width: 85, align: 'right' });
 
-      doc.text(`IVA (19%):`, 438, timbreY + 46);
-      doc.text(`$ ${ivaVal.toLocaleString('es-CL')}`, 480, timbreY + 46, { width: 85, align: 'right' });
+      doc.text(`IVA (19%):`, 438, timbreY + 40);
+      doc.text(`$ ${ivaVal.toLocaleString('es-CL')}`, 480, timbreY + 40, { width: 85, align: 'right' });
 
       doc.font('Helvetica-Bold').fontSize(9);
-      doc.text(`Total:`, 438, timbreY + 68);
-      doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 68, { width: 85, align: 'right' });
+      doc.text(`Total:`, 438, timbreY + 60);
+      doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 60, { width: 85, align: 'right' });
 
       // Pie de página sitio web oficial
+      const webY = 740;
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#E50914');
-      doc.text('www.eleodoroelgrande.cl', 35, 740, { width: 535, align: 'center' });
+      doc.text('www.eleodoroelgrande.cl', 35, webY, { width: 410, align: 'center' });
+
+      // Sello de Agua / Marca de Agua (Esquina inferior derecha a la derecha del sitio web)
+      const watermarkPath = path.join(__dirname, '..', 'public', 'sello_agua.jpg');
+      if (fs.existsSync(watermarkPath)) {
+        try {
+          doc.save();
+          doc.opacity(0.25);
+          doc.image(watermarkPath, 465, 680, { width: 100 });
+          doc.restore();
+        } catch (e) {
+          console.error('Error imprimiendo sello de agua:', e.message);
+        }
+      }
 
       doc.end();
 
