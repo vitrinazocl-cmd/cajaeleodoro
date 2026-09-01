@@ -560,17 +560,17 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 60, { width: 85, align: 'right' });
 
       // Pie de página sitio web oficial
-      const webY = 740;
+      const webY = 735;
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#E50914');
-      doc.text('www.eleodoroelgrande.cl', 35, webY, { width: 410, align: 'center' });
+      doc.text('www.eleodoroelgrande.cl', 35, webY + 8, { width: 370, align: 'center' });
 
-      // Sello de Agua / Marca de Agua (Esquina inferior derecha a la derecha del sitio web)
+      // Logo Sello de Agua en la esquina inferior derecha (A la derecha del sitio web)
       const watermarkPath = path.join(__dirname, '..', 'public', 'sello_agua.jpg');
       if (fs.existsSync(watermarkPath)) {
         try {
           doc.save();
-          doc.opacity(0.25);
-          doc.image(watermarkPath, 465, 680, { width: 100 });
+          doc.opacity(0.85);
+          doc.image(watermarkPath, 415, 690, { width: 140 });
           doc.restore();
         } catch (e) {
           console.error('Error imprimiendo sello de agua:', e.message);
