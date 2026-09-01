@@ -561,19 +561,19 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       // Pie de página sitio web oficial
       const webY = 735;
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#E50914');
-      doc.text('www.eleodoroelgrande.cl', 35, webY + 8, { width: 370, align: 'center' });
+      doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#E50914');
+      doc.text('www.eleodoroelgrande.cl', 35, webY + 10, { width: 350, align: 'center' });
 
-      // Logo Sello de Agua en la esquina inferior derecha (A la derecha del sitio web)
-      const watermarkPath = path.join(__dirname, '..', 'public', 'sello_agua.jpg');
+      // Logo impreso en la esquina inferior derecha (a la derecha del sitio web)
+      const watermarkPath = fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.jpg'))
+        ? path.join(__dirname, '..', 'public', 'sello_agua.jpg')
+        : path.join(__dirname, 'sello_agua.jpg');
+
       if (fs.existsSync(watermarkPath)) {
         try {
-          doc.save();
-          doc.opacity(0.85);
-          doc.image(watermarkPath, 415, 690, { width: 140 });
-          doc.restore();
+          doc.image(watermarkPath, 390, 680, { width: 165 });
         } catch (e) {
-          console.error('Error imprimiendo sello de agua:', e.message);
+          console.error('Error imprimiendo logo inferior:', e.message);
         }
       }
 
