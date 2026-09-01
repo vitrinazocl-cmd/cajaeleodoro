@@ -15,6 +15,7 @@ const DESPACHOS_DIR = path.join(__dirname, '..', 'exports', 'despachos');
 const DESPACHOS_EFECTIVO_DIR = path.join(DESPACHOS_DIR, 'efectivo');
 const DESPACHOS_TRANSFERENCIA_DIR = path.join(DESPACHOS_DIR, 'transferencia');
 const DESPACHOS_TARJETA_DIR = path.join(DESPACHOS_DIR, 'tarjeta');
+const DESPACHOS_COMBINADO_DIR = path.join(DESPACHOS_DIR, 'combinado');
 
 // Asegurar directorios
 if (!fs.existsSync(BOLETAS_DIR)) fs.mkdirSync(BOLETAS_DIR, { recursive: true });
@@ -23,6 +24,7 @@ if (!fs.existsSync(DESPACHOS_DIR)) fs.mkdirSync(DESPACHOS_DIR, { recursive: true
 if (!fs.existsSync(DESPACHOS_EFECTIVO_DIR)) fs.mkdirSync(DESPACHOS_EFECTIVO_DIR, { recursive: true });
 if (!fs.existsSync(DESPACHOS_TRANSFERENCIA_DIR)) fs.mkdirSync(DESPACHOS_TRANSFERENCIA_DIR, { recursive: true });
 if (!fs.existsSync(DESPACHOS_TARJETA_DIR)) fs.mkdirSync(DESPACHOS_TARJETA_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_COMBINADO_DIR)) fs.mkdirSync(DESPACHOS_COMBINADO_DIR, { recursive: true });
 
 // Formateador de moneda CLP
 const fmtCLP = (val) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
@@ -283,11 +285,14 @@ async function sendWhatsAppNotification(phoneNumber, message) {
 function generateDespachoPDF(despacho, items, clientInfo) {
   return new Promise((resolve, reject) => {
     try {
-      // Determinar subcarpeta según método de pago (efectivo, transferencia, tarjeta)
+      // Determinar subcarpeta según método de pago (efectivo, transferencia, tarjeta, combinado)
       let subDir = DESPACHOS_TRANSFERENCIA_DIR;
       let rawMethod = String(despacho.forma_pago || despacho.formaPago || 'transferencia').toLowerCase().trim();
 
-      if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) {
+      if (rawMethod.includes('combinado') || rawMethod.includes('mixto')) {
+        subDir = DESPACHOS_COMBINADO_DIR;
+        rawMethod = 'Pago Combinado';
+      } else if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) {
         subDir = DESPACHOS_EFECTIVO_DIR;
         rawMethod = 'Efectivo';
       } else if (rawMethod.includes('tarjeta') || rawMethod.includes('card') || rawMethod.includes('debito') || rawMethod.includes('débito') || rawMethod.includes('credito') || rawMethod.includes('crédito')) {

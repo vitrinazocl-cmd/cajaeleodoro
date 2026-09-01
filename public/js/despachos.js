@@ -88,7 +88,9 @@ function renderDespachosTable(despachos) {
     
     let pagoBadge = `<span class="badge" style="background: rgba(0, 123, 255, 0.15); color: #38ef7d; border: 1px solid rgba(0, 123, 255, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🏦 Transferencia</span>`;
     const m = String(d.forma_pago || 'transferencia').toLowerCase();
-    if (m.includes('efectivo') || m.includes('cash')) {
+    if (m.includes('combinado') || m.includes('mixto')) {
+      pagoBadge = `<span class="badge" style="background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🔀 Pago Combinado</span>`;
+    } else if (m.includes('efectivo') || m.includes('cash')) {
       pagoBadge = `<span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💵 Efectivo</span>`;
     } else if (m.includes('tarjeta') || m.includes('card') || m.includes('debito') || m.includes('credito')) {
       pagoBadge = `<span class="badge" style="background: rgba(111, 66, 193, 0.15); color: #d63384; border: 1px solid rgba(111, 66, 193, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💳 Tarjeta</span>`;
@@ -126,7 +128,8 @@ function filterDespachos(q) {
     let matchPago = true;
     if (pagoFiltro !== 'TODAS') {
       const rawP = String(d.forma_pago || 'transferencia').toLowerCase();
-      if (pagoFiltro === 'Efectivo') matchPago = rawP.includes('efectivo');
+      if (pagoFiltro === 'Pago Combinado') matchPago = rawP.includes('combinado') || rawP.includes('mixto');
+      else if (pagoFiltro === 'Efectivo') matchPago = rawP.includes('efectivo');
       else if (pagoFiltro === 'Tarjeta') matchPago = rawP.includes('tarjeta') || rawP.includes('debito') || rawP.includes('credito');
       else if (pagoFiltro === 'Transferencia') matchPago = rawP.includes('transferencia');
     }

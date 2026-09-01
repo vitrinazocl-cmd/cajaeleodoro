@@ -1736,7 +1736,8 @@ app.get('/api/despachos/:id/pdf', authenticateToken, async (req, res) => {
     const rawMethod = String(gdRes.rows[0].forma_pago || 'transferencia').toLowerCase().trim();
 
     let subfolder = 'transferencia';
-    if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) subfolder = 'efectivo';
+    if (rawMethod.includes('combinado') || rawMethod.includes('mixto')) subfolder = 'combinado';
+    else if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) subfolder = 'efectivo';
     else if (rawMethod.includes('tarjeta') || rawMethod.includes('card') || rawMethod.includes('debito') || rawMethod.includes('credito')) subfolder = 'tarjeta';
 
     let pdfPath = path.join(__dirname, 'exports', 'despachos', subfolder, `${folio}.pdf`);
