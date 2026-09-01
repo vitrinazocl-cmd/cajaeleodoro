@@ -341,6 +341,31 @@ function generateDespachoPDF(despacho, items, clientInfo) {
         }
       }
 
+      // Sanitizar direcciones y vendedor para eliminar remanentes viejos de Lo Espejo
+      let rawDirDespacho = despacho.direccion_despacho || (clientInfo && clientInfo.direccion);
+      if (!rawDirDespacho || rawDirDespacho.toUpperCase().includes('ESPEJO') || rawDirDespacho.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
+        rawDirDespacho = 'Laguna Sur #8383 Pudahuel';
+      }
+      let rawComDespacho = despacho.comuna_despacho || (clientInfo && clientInfo.comuna);
+      if (!rawComDespacho || rawComDespacho.toUpperCase().includes('CERILLOS') || rawComDespacho.toUpperCase().includes('SAN FERNANDO')) {
+        rawComDespacho = 'PUDAHUEL';
+      }
+
+      let rawDirDestino = despacho.direccion_destino;
+      if (!rawDirDestino || rawDirDestino.toUpperCase().includes('ESPEJO') || rawDirDestino.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
+        rawDirDestino = 'Rene Oliva #1358 Cerro Navia';
+      }
+      let rawComDestino = despacho.comuna_destino;
+      if (!rawComDestino || rawComDestino.toUpperCase().includes('CERILLOS') || rawComDestino.toUpperCase().includes('SAN FERNANDO')) {
+        rawComDestino = 'CERRO NAVIA';
+      }
+
+      let vendorVal = despacho.vendedor || despacho.vendedor_nombre;
+      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) {
+        if (items && items[0] && items[0].vendedor) vendorVal = items[0].vendedor;
+      }
+      if (!vendorVal || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Juan';
+
       const emisorY = 85;
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
       doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 14);
@@ -362,18 +387,18 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.font('Helvetica').fontSize(8);
       doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'COMERCIAL ELEODORO SPA'}`, 100, infoY + 8, { width: 220, ellipsis: true });
-      doc.text(`: ${despacho.direccion_despacho || clientInfo.direccion || 'Laguna Sur #8383 Pudahuel'}`, 100, infoY + 22, { width: 220, ellipsis: true });
-      doc.text(`: ${despacho.comuna_despacho || clientInfo.comuna || 'PUDAHUEL'}`, 100, infoY + 36);
+      doc.text(`: ${rawDirDespacho}`, 100, infoY + 22, { width: 220, ellipsis: true });
+      doc.text(`: ${rawComDespacho}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);
       doc.font('Helvetica-Bold');
-      doc.text(`: ${despacho.vendedor || '-'}`, 100, infoY + 64, { width: 220, ellipsis: true });
+      doc.text(`: ${vendorVal}`, 100, infoY + 64, { width: 220, ellipsis: true });
       doc.font('Helvetica');
 
       // Columna 2
       doc.font('Helvetica-Bold');
       doc.text('Ciudad :', 220, infoY + 36);
       doc.font('Helvetica');
-      doc.text(`${despacho.ciudad_despacho || despacho.comuna_despacho || 'SANTIAGO'}`, 260, infoY + 36);
+      doc.text(`${despacho.ciudad_despacho || rawComDespacho || 'SANTIAGO'}`, 260, infoY + 36);
 
       doc.font('Helvetica-Bold');
       doc.text('Vencimiento :', 220, infoY + 50);
@@ -419,8 +444,8 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.font('Helvetica').fontSize(8);
       doc.text(`: ${despacho.patente_vehiculo || 'CYPX-41'}`, 390, transpY + 6);
-      doc.text(`: ${despacho.direccion_destino || despacho.direccion_despacho || 'Rene Oliva #1358 Cerro Navia'}`, 390, transpY + 20, { width: 175, ellipsis: true });
-      doc.text(`: ${despacho.comuna_destino || despacho.comuna_despacho || 'CERRO NAVIA'}`, 390, transpY + 34);
+      doc.text(`: ${rawDirDestino}`, 390, transpY + 20, { width: 175, ellipsis: true });
+      doc.text(`: ${rawComDestino}`, 390, transpY + 34);
       doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
 
       // --- 5. TABLA DE PRODUCTOS (HASTA 16 SKUs PER PAGE) ---

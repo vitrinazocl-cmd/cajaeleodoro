@@ -676,13 +676,18 @@ function processSelectedExcelFile(file) {
       // Mapear campos estándar soporta mayúsculas y minúsculas de cualquier plantilla (ej: RUT, DESCRIPCION, CANTIDAD, PATENTE, etc.)
       ParsedExcelRows = jsonRows.map(row => {
         const getValue = (...keys) => {
+          const rowKeys = Object.keys(row);
           for (const k of keys) {
-            if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') return row[k];
-            // probar en mayúsculas / minúsculas
-            const upperKey = k.toUpperCase();
-            if (row[upperKey] !== undefined && row[upperKey] !== null && String(row[upperKey]).trim() !== '') return row[upperKey];
-            const lowerKey = k.toLowerCase();
-            if (row[lowerKey] !== undefined && row[lowerKey] !== null && String(row[lowerKey]).trim() !== '') return row[lowerKey];
+            const targetNorm = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+            for (const rKey of rowKeys) {
+              const rowNorm = String(rKey).toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (rowNorm === targetNorm) {
+                const val = row[rKey];
+                if (val !== undefined && val !== null && String(val).trim() !== '') {
+                  return String(val).trim();
+                }
+              }
+            }
           }
           return null;
         };
