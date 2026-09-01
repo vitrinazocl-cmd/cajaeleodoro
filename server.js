@@ -1682,7 +1682,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         folio,
         fecha_emision: new Date(),
         cliente_nombre: firstRow.cliente_nombre || firstRow.senor_es || 'CONSTANZA RIVEROS',
-        cliente_rut: firstRow.cliente_rut || '77.261.280-K',
+        cliente_rut: firstRow.cliente_rut || '78.256.573-7',
         giro: firstRow.giro || 'VENTA AL POR MAYOR',
         direccion_despacho: firstRow.direccion_despacho || 'Avenida Manuel Rodríguez 1209',
         comuna_despacho: firstRow.comuna_despacho || 'SAN FERNANDO',

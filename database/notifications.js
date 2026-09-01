@@ -323,11 +323,11 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.rect(boxX, boxY, boxW, boxH).lineWidth(2).stroke('#E50914');
       
       doc.fillColor('#E50914').font('Helvetica-Bold').fontSize(12);
-      doc.text('R.U.T.: 77.261.280-K', boxX, boxY + 12, { width: boxW, align: 'center' });
+      doc.text('R.U.T.: 78.256.573-7', boxX, boxY + 12, { width: boxW, align: 'center' });
       doc.text('GUIA DE DESPACHO', boxX, boxY + 28, { width: boxW, align: 'center' });
       doc.text('ELECTRONICA', boxX, boxY + 42, { width: boxW, align: 'center' });
       doc.fontSize(14).text(`Nº ${despacho.folio || '000001'}`, boxX, boxY + 58, { width: boxW, align: 'center' });
-      doc.fontSize(8.5).text('S.I.I. - SANTIAGO ORIENTE', boxX, boxY + 76, { width: boxW, align: 'center' });
+      doc.fontSize(8.5).text('S.I.I. - SANTIAGO PONIENTE', boxX, boxY + 76, { width: boxW, align: 'center' });
 
       // Resetear color
       doc.fillColor('#000000');
@@ -342,9 +342,9 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       }
 
       const emisorY = 85;
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIALIZADORA ELEODORO EL GRANDE SPA', 35, emisorY);
-      doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('VENTA AL POR MAYOR Y MENOR DE BEBIDAS Y LICORES EN ALMACENES ESPECIALIZADOS', 35, emisorY + 14);
-      doc.text('Av. Principal 4500, Oficina 201, Santiago', 35, emisorY + 24);
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
+      doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 14);
+      doc.text('LAGUNA SUR 8383 A LA VINA IV, PUDAHUEL, SANTIAGO', 35, emisorY + 24);
 
       // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
       const infoY = 138;

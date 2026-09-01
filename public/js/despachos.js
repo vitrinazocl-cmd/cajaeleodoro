@@ -690,7 +690,7 @@ function processSelectedExcelFile(file) {
         return {
           senor_es: getValue("Señor(es) / Cliente", "Cliente", "Señor(es)", "NOMBRE_CLIENTE", "RECEPTOR") || "CONSTANZA RIVEROS",
           cliente_nombre: getValue("Señor(es) / Cliente", "Cliente", "Señor(es)", "NOMBRE_CLIENTE", "RECEPTOR") || "CONSTANZA RIVEROS",
-          cliente_rut: getValue("RUT", "RUT Cliente", "RUT_CLIENTE", "RUT RECEPTOR") || "77.261.280-K",
+          cliente_rut: getValue("RUT", "RUT Cliente", "RUT_CLIENTE", "RUT RECEPTOR") || "78.256.573-7",
           direccion_despacho: getValue("DIRECCION", "Dirección", "Direccion", "DIRECCION_DESTINO") || "Avenida Manuel Rodríguez 1209",
           comuna_despacho: getValue("COMUNA", "Comuna", "COMUNA_DESTINO") || "SAN FERNANDO",
           ciudad_despacho: getValue("CIUDAD", "Ciudad", "COMUNA", "Comuna") || "SAN FERNANDO",
