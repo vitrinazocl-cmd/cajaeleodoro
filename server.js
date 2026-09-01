@@ -1765,9 +1765,47 @@ app.listen(PORT, async () => {
     // Ignorar error si la columna ya existía
   }
   
-  // Ejecutar importación automática si el catálogo está vacío
+  // Ejecutar importación automática si el catálogo o clientes están vacíos
   autoImportCatalog();
+  autoImportClients();
 });
+
+async function autoImportClients() {
+  try {
+    const check = await db.query('SELECT COUNT(*) as count FROM clientes');
+    const count = parseInt(check.rows[0]?.count) || 0;
+
+    if (count < 50) {
+      console.log('[DB] La lista de clientes en base de datos está vacía o incompleta. Iniciando importación automática...');
+      const clientsPath = path.join(__dirname, 'database', 'clientes.json');
+      if (fs.existsSync(clientsPath)) {
+        const clientsData = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+        console.log(`[DB] Importando ${clientsData.length} clientes desde clientes.json...`);
+
+        const isPostgres = db.getMode() === 'POSTGRES';
+        if (isPostgres) await db.query('BEGIN');
+
+        let insertedCount = 0;
+        for (const c of clientsData) {
+          try {
+            await db.query(
+              'INSERT INTO clientes (rut_o_nit, nombre, direccion) VALUES ($1, $2, $3)',
+              [c.rut, c.nombre, c.direccion || c.comuna || '']
+            );
+            insertedCount++;
+          } catch (e) {
+            // Ignorar duplicados
+          }
+        }
+
+        if (isPostgres) await db.query('COMMIT');
+        console.log(`[DB] Se importaron ${insertedCount} clientes a la base de datos.`);
+      }
+    }
+  } catch (err) {
+    console.error('[DB] Error durante la importación automática de clientes:', err.message);
+  }
+}
 
 async function autoImportCatalog() {
   try {
