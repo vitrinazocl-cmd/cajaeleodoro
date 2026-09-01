@@ -555,11 +555,9 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`Total:`, 438, timbreY + 68);
       doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 68, { width: 85, align: 'right' });
 
-      // Pie de página legal y sitio web oficial
+      // Pie de página sitio web oficial
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#E50914');
-      doc.text('www.eleodoroelgrande.cl', 35, 742, { width: 535, align: 'center' });
-      doc.fontSize(7).font('Helvetica').fillColor('#555555');
-      doc.text('COMERCIAL ELEODORO SPA — Distribución de Bebidas y Licores', 35, 754, { width: 535, align: 'center' });
+      doc.text('www.eleodoroelgrande.cl', 35, 740, { width: 535, align: 'center' });
 
       doc.end();
 
