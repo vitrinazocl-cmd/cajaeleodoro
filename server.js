@@ -1681,7 +1681,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         id: gdId,
         folio,
         fecha_emision: new Date(),
-        cliente_nombre: firstRow.cliente_nombre || firstRow.senor_es || 'COMERCIAL ELEODORO SPA',
+        cliente_nombre: 'COMERCIAL ELEODORO SPA',
         cliente_rut: firstRow.cliente_rut || '78.256.573-7',
         giro: firstRow.giro || 'VENTA AL POR MAYOR',
         direccion_despacho: firstRow.direccion_despacho || 'Laguna Sur #8383 Pudahuel',

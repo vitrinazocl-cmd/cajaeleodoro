@@ -386,7 +386,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Vendedor', 42, infoY + 64);
 
       doc.font('Helvetica').fontSize(8);
-      doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'COMERCIAL ELEODORO SPA'}`, 100, infoY + 8, { width: 220, ellipsis: true });
+      doc.text(': COMERCIAL ELEODORO SPA', 100, infoY + 8, { width: 220, ellipsis: true });
       doc.text(`: ${rawDirDespacho}`, 100, infoY + 22, { width: 220, ellipsis: true });
       doc.text(`: ${rawComDespacho}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);

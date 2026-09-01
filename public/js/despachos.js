@@ -693,8 +693,8 @@ function processSelectedExcelFile(file) {
         };
 
         return {
-          senor_es: getValue("Señor(es) / Cliente", "Cliente", "Señor(es)", "NOMBRE_CLIENTE", "RECEPTOR") || "COMERCIAL ELEODORO SPA",
-          cliente_nombre: getValue("Señor(es) / Cliente", "Cliente", "Señor(es)", "NOMBRE_CLIENTE", "RECEPTOR") || "COMERCIAL ELEODORO SPA",
+          senor_es: "COMERCIAL ELEODORO SPA",
+          cliente_nombre: "COMERCIAL ELEODORO SPA",
           cliente_rut: getValue("RUT", "RUT Cliente", "RUT_CLIENTE", "RUT RECEPTOR") || "78.256.573-7",
           direccion_despacho: getValue("DIRECCION", "Dirección", "Direccion", "DIRECCION_DESTINO") || "Laguna Sur #8383 Pudahuel",
           comuna_despacho: getValue("COMUNA", "Comuna", "COMUNA_DESTINO") || "PUDAHUEL",
