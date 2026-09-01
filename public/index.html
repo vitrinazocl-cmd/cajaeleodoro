@@ -17,6 +17,8 @@
   
   <!-- Chart.js para Reportería Ejecutiva y Business Intelligence -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- XLSX SheetJS para importación y exportación de plantillas Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <!-- Estilos Corporativos Premium -->
   <link rel="stylesheet" href="css/styles.css">
@@ -564,37 +566,139 @@
         </section>
 
         <!-- ==========================================
-             VISTA: GUÍAS DE DESPACHO
+             VISTA: GUÍAS DE DESPACHO (DASHBOARD AUTOMATIZADO)
              ========================================== -->
         <section id="view-erp-despachos" class="app-view">
-          <div class="erp-container">
-            <div class="table-header-actions">
-              <div class="search-box">
-                <span class="material-icons-round">search</span>
-                <input type="text" id="erp-despachos-search" placeholder="Buscar guías por folio o cliente...">
-              </div>
-              <button class="btn-primary" id="btn-erp-new-despacho">
-                <span class="material-icons-round">add_circle</span> Emitir Guía de Despacho
+          <div class="erp-container" style="max-width: 1000px; margin: 0 auto;">
+            
+            <!-- Selector de Pestañas dentro del Módulo -->
+            <div style="display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+              <button type="button" class="btn-tab active" id="tab-btn-despacho-dashboard" onclick="switchDespachoSubTab('dashboard')">
+                <span class="material-icons-round">dashboard</span> Generador por Excel (RPA)
+              </button>
+              <button type="button" class="btn-tab" id="tab-btn-despacho-historial" onclick="switchDespachoSubTab('historial')">
+                <span class="material-icons-round">history</span> Historial de Guías Emitidas
               </button>
             </div>
-            <div class="table-responsive">
-              <table class="erp-table">
-                <thead>
-                  <tr>
-                    <th>Folio</th>
-                    <th>Cliente</th>
-                    <th>RUT Cliente</th>
-                    <th>Fecha Emisión</th>
-                    <th>Tipo Traslado</th>
-                    <th>Total ($)</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="erp-despachos-table-body">
-                  <tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>
-                </tbody>
-              </table>
+
+            <!-- CONTENIDO 1: DASHBOARD GENERADOR DE GUÍAS POR EXCEL -->
+            <div id="despacho-subtab-dashboard" class="despacho-subtab-content">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">Generador de Guías de Despacho</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Automatización para emisión masiva de Guías Electrónicas desde archivo Excel</p>
+              </div>
+
+              <div class="card-glass" style="padding: 20px 24px; border-radius: 16px; margin-bottom: 25px;">
+                <!-- Header de Sección: Archivo Excel + Botones de Acción -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                  <label style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Archivo Excel</label>
+                  
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="button" class="btn-secondary" id="btn-download-excel-template" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem;">
+                      <span class="material-icons-round" style="font-size: 18px;">download</span> Descargar Template
+                    </button>
+                    <button type="button" class="btn-primary" id="btn-start-rpa-generation-top" onclick="handleStartRPAGeneration()" style="padding: 10px 24px; font-size: 1rem; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #E50914 0%, #FF007F 100%); box-shadow: 0 4px 14px rgba(229,9,20,0.4); cursor: pointer;">
+                      <span class="material-icons-round" style="font-size: 22px;">play_circle_filled</span> Generar Guías (PDF)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dropzone Carga de Archivo Excel Compacto -->
+                <div id="despacho-excel-dropzone" class="excel-dropzone" style="border: 2px dashed rgba(255,255,255,0.25); border-radius: 12px; padding: 16px 15px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: rgba(0,0,0,0.2);">
+                  <input type="file" id="despacho-excel-input" accept=".xlsx, .xls, .csv" style="display: none;">
+                  <span class="material-icons-round" style="font-size: 32px; color: var(--color-primary); margin-bottom: 4px;">upload_file</span>
+                  <div style="font-size: 1rem; font-weight: 600; color: var(--text-primary);" id="dropzone-text-title">Arrastra tu archivo o haz click aquí</div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;" id="dropzone-text-sub">Soporta formatos .xlsx y .xls (Máx. 500 filas)</div>
+                </div>
+
+                <!-- Selección de Modo de SKU por Guía -->
+                <div style="margin-top: 15px;">
+                  <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 8px;">Modo de Generación</label>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <label class="radio-mode-card" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">
+                      <input type="radio" name="sku-mode" value="1sku">
+                      <div>
+                        <strong style="display: block; font-size: 0.9rem;">1 SKU por Guía</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Genera 1 PDF independiente por cada fila</span>
+                      </div>
+                    </label>
+
+                    <label class="radio-mode-card active" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 2px solid var(--color-primary); cursor: pointer; background: rgba(229,9,20,0.08);">
+                      <input type="radio" name="sku-mode" value="16sku" checked>
+                      <div>
+                        <strong style="display: block; font-size: 0.9rem;">Hasta 16 SKU por Guía</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Agrupa hasta 16 filas en la misma guía oficial</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- SEGUNDO BOTÓN DE GENERACIÓN ABAJO (PARA SEGUNDA OPCIÓN VISUAL) -->
+                <div style="margin-top: 15px;">
+                  <button type="button" class="btn-primary" id="btn-start-rpa-generation" style="width: 100%; padding: 14px; font-size: 1.1rem; font-weight: 800; border-radius: 10px; display: flex; justify-content: center; align-items: center; gap: 10px; background: linear-gradient(135deg, #E50914 0%, #FF007F 100%); box-shadow: 0 4px 16px rgba(229,9,20,0.4); cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 24px;">play_circle_filled</span> Generar Guías (PDF)
+                  </button>
+                </div>
+
+                <!-- Vista Previa de Tabla de Productos del Excel -->
+                <div id="excel-preview-container" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);" id="preview-row-count">Datos Cargados del Excel (0 Filas)</h4>
+                    <button type="button" class="btn-secondary" id="btn-clear-excel-preview" style="padding: 4px 10px; font-size: 0.8rem;">Limpiar Cargados</button>
+                  </div>
+                  <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                    <table class="erp-table" style="font-size: 0.85rem;">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Cliente</th>
+                          <th>RUT Cliente</th>
+                          <th>SKU</th>
+                          <th>Detalle Producto</th>
+                          <th>Cant.</th>
+                          <th>Precio ($)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="excel-preview-table-body">
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
             </div>
+
+            <!-- CONTENIDO 2: HISTORIAL DE GUÍAS EMITIDAS -->
+            <div id="despacho-subtab-historial" class="despacho-subtab-content" style="display: none;">
+              <div class="table-header-actions">
+                <div class="search-box">
+                  <span class="material-icons-round">search</span>
+                  <input type="text" id="erp-despachos-search" placeholder="Buscar guías por folio o cliente...">
+                </div>
+                <button class="btn-primary" id="btn-erp-new-despacho">
+                  <span class="material-icons-round">add_circle</span> Emitir Guía Manual
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="erp-table">
+                  <thead>
+                    <tr>
+                      <th>Folio</th>
+                      <th>Cliente</th>
+                      <th>RUT Cliente</th>
+                      <th>Fecha Emisión</th>
+                      <th>Tipo Traslado</th>
+                      <th>Total ($)</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="erp-despachos-table-body">
+                    <tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -603,10 +707,14 @@
              ========================================== -->
         <section id="view-erp-clientes" class="app-view">
           <div class="erp-container">
-            <div class="table-header-actions">
-              <div class="search-box">
+            <div class="table-header-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div class="search-box" style="flex: 1; min-width: 280px; position: relative;">
                 <span class="material-icons-round">search</span>
-                <input type="text" id="erp-clients-search" placeholder="Buscar clientes...">
+                <input type="text" id="erp-clients-search" placeholder="🔍 Buscador Inteligente: Nombre, RUT, Comuna, Teléfono..." style="width: 100%; padding-right: 32px;">
+                <span id="erp-clients-search-clear" class="material-icons-round" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); display: none; font-size: 18px;" title="Limpiar búsqueda">close</span>
+              </div>
+              <div id="erp-clients-counter" style="background: rgba(229, 9, 20, 0.12); color: var(--color-primary); border: 1px solid rgba(229, 9, 20, 0.3); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                <span class="material-icons-round" style="font-size: 16px;">people</span> <span id="erp-clients-count-text">0 Clientes</span>
               </div>
               <button class="btn-primary" id="btn-erp-new-client">
                 <span class="material-icons-round">person_add</span> Registrar Cliente
@@ -1223,9 +1331,15 @@
           <!-- Items Detail -->
           <h4 style="margin: 15px 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-weight: 600;">Detalle de Mercaderías</h4>
           <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px;">
-            <div class="form-group" style="flex: 2;">
-              <label for="des-producto-select">Producto</label>
-              <select id="des-producto-select" class="form-control" style="width:100%; padding:8px;"></select>
+            <div class="form-group" style="flex: 2; position: relative;">
+              <label for="des-producto-search">Buscar Producto</label>
+              <div style="position: relative;">
+                <input type="text" id="des-producto-search" class="form-control" placeholder="🔍 Buscador Inteligente: Nombre, SKU, Categoria..." autocomplete="off" style="width:100%; padding-right: 28px;">
+                <span id="des-producto-clear" class="material-icons-round" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); display: none; font-size: 18px;">close</span>
+              </div>
+              <input type="hidden" id="des-producto-id" value="">
+              <select id="des-producto-select" style="display:none;"></select>
+              <div id="des-producto-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1E1E22; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; max-height: 240px; overflow-y: auto; z-index: 1100; box-shadow: 0 10px 25px rgba(0,0,0,0.6); margin-top: 4px;"></div>
             </div>
             <div class="form-group" style="width: 100px;">
               <label for="des-cantidad">Cantidad</label>

@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./database/connection');
 const notifications = require('./database/notifications');
+const XLSX = require('xlsx');
 
 require('dotenv').config();
 
@@ -1492,6 +1493,231 @@ app.post('/api/despachos', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error al registrar despacho:', err);
     res.status(500).json({ success: false, message: 'Error interno al registrar el despacho.' });
+  }
+});
+
+// -------------------------------------------------------------
+// DESCARGAR PLANTILLA DE EXCEL PARA GUÍAS DE DESPACHO
+// -------------------------------------------------------------
+app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
+  try {
+    const sampleData = [
+      {
+        "Señor(es) / Cliente": "CONSTANZA RIVEROS",
+        "RUT Cliente": "77.261.280-K",
+        "Dirección": "Avenida Manuel Rodríguez 1209",
+        "Comuna": "SAN FERNANDO",
+        "Ciudad": "SAN FERNANDO",
+        "Giro": "VENTA AL POR MAYOR",
+        "Nombre Chofer": "CRISTIAN MIRANDA",
+        "RUT Chofer": "18338934-3",
+        "Patente": "CYPX-41",
+        "Dirección Destino": "AV. LO ESPEJO 3200",
+        "Comuna Destino": "CERILLOS",
+        "RUT Transportista": "18338934-3",
+        "Código SKU": "PRD-1001",
+        "Detalle Producto": "BEBIDA COCA COLA 1.5L RETORNABLE",
+        "Cantidad": 1,
+        "U.M.": "UN",
+        "Precio Unitario": 1200,
+        "Descuento": 0
+      },
+      {
+        "Señor(es) / Cliente": "CONSTANZA RIVEROS",
+        "RUT Cliente": "77.261.280-K",
+        "Dirección": "Avenida Manuel Rodríguez 1209",
+        "Comuna": "SAN FERNANDO",
+        "Ciudad": "SAN FERNANDO",
+        "Giro": "VENTA AL POR MAYOR",
+        "Nombre Chofer": "CRISTIAN MIRANDA",
+        "RUT Chofer": "18338934-3",
+        "Patente": "CYPX-41",
+        "Dirección Destino": "AV. LO ESPEJO 3200",
+        "Comuna Destino": "CERILLOS",
+        "RUT Transportista": "18338934-3",
+        "Código SKU": "PRD-1002",
+        "Detalle Producto": "CERVEZA CORONA 330CC PACK 24",
+        "Cantidad": 1,
+        "U.M.": "UN",
+        "Precio Unitario": 18500,
+        "Descuento": 0
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Plantilla_Guias");
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="Template_Guia_Despacho_Eleodoro.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    console.error('Error al generar plantilla Excel:', err);
+    res.status(500).json({ success: false, message: 'Error al generar plantilla Excel.' });
+  }
+});
+
+// -------------------------------------------------------------
+// GENERAR GUÍAS DE DESPACHO EN LOTE DESDE EXCEL
+// -------------------------------------------------------------
+app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, res) => {
+  const { modo, items } = req.body;
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'No se enviaron filas de productos para procesar.' });
+  }
+
+  try {
+    const isPostgres = db.isPostgres;
+    const generatedGuides = [];
+
+    // Agrupar filas por guía según el modo seleccionado:
+    // modo === '1sku': Cada fila genera una guía independiente.
+    // modo === '16sku' (default): Agrupar por cliente / destinatario hasta 16 SKUs por guía.
+    let groups = [];
+
+    if (modo === '1sku') {
+      groups = items.map(item => [item]);
+    } else {
+      const mapKeyGroups = {};
+      items.forEach(item => {
+        const key = `${item.cliente_rut || item.cliente_nombre || 'GENERAL'}_${item.direccion_despacho || ''}`;
+        if (!mapKeyGroups[key]) mapKeyGroups[key] = [];
+        mapKeyGroups[key].push(item);
+      });
+
+      Object.values(mapKeyGroups).forEach(groupItems => {
+        for (let i = 0; i < groupItems.length; i += 16) {
+          groups.push(groupItems.slice(i, i + 16));
+        }
+      });
+    }
+
+    for (const group of groups) {
+      const firstRow = group[0];
+      const nextFolioNum = Math.floor(700000 + Math.random() * 90000);
+      const folio = `GD-${nextFolioNum}`;
+
+      let subtotal = 0;
+      const formattedItems = group.map((row, idx) => {
+        const cant = parseFloat(row.cantidad || row.CANTIDAD || 1);
+        const precio = parseFloat(row.precio_unitario || row.PRECIO || row.PRECIO_UNITARIO || 0);
+        const descto = parseFloat(row.descuento || row.DESCUENTO || 0);
+        const itemSub = (cant * precio) - descto;
+        subtotal += itemSub;
+
+        return {
+          no: idx + 1,
+          codigo: row.codigo_sku || row.codigo || row.SKU || row.CODIGO || `PRD-${idx+1}`,
+          nombre: row.detalle_producto || row.nombre || row.DESCRIPCION || 'Producto',
+          cantidad: cant,
+          um: row.um || row.UM || 'UN',
+          precio_unitario: precio,
+          descuento: descto,
+          subtotal: itemSub
+        };
+      });
+
+      const iva = Math.round(subtotal * 0.19);
+      const total = subtotal + iva;
+
+      if (isPostgres) await db.query('BEGIN');
+
+      const gdInsertRes = await db.query(
+        `INSERT INTO guias_despacho 
+         (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         RETURNING id`,
+        [
+          folio,
+          new Date(),
+          req.user ? req.user.id : 1,
+          1,
+          firstRow.tipo_traslado || 'TRASLADO: Otros traslados No Venta',
+          firstRow.patente_vehiculo || 'CYPX-41',
+          firstRow.rut_chofer || '18338934-3',
+          firstRow.nombre_chofer || 'CRISTIAN MIRANDA',
+          firstRow.direccion_despacho || 'Avenida Manuel Rodríguez 1209',
+          firstRow.comuna_despacho || 'SAN FERNANDO',
+          subtotal,
+          iva,
+          total
+        ]
+      );
+
+      const gdId = (gdInsertRes.rows && gdInsertRes.rows.length > 0) ? gdInsertRes.rows[0].id : (gdInsertRes.lastID || 1);
+
+      // Obtener un producto_id válido existente de la BD para asociarlo
+      let targetProdId = 1;
+      try {
+        const prodCheck = await db.query('SELECT id FROM productos LIMIT 1');
+        if (prodCheck.rows && prodCheck.rows.length > 0) {
+          targetProdId = prodCheck.rows[0].id;
+        }
+      } catch (e) {}
+
+      for (const item of formattedItems) {
+        await db.query(
+          `INSERT INTO detalle_guias_despacho (guia_id, producto_id, cantidad, precio_unitario, subtotal)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [gdId, targetProdId, Math.max(1, Math.round(item.cantidad)), item.precio_unitario, item.subtotal]
+        );
+      }
+
+      if (isPostgres) await db.query('COMMIT');
+
+      const despachoObj = {
+        id: gdId,
+        folio,
+        fecha_emision: new Date(),
+        cliente_nombre: firstRow.cliente_nombre || firstRow.senor_es || 'CONSTANZA RIVEROS',
+        cliente_rut: firstRow.cliente_rut || '77.261.280-K',
+        giro: firstRow.giro || 'VENTA AL POR MAYOR',
+        direccion_despacho: firstRow.direccion_despacho || 'Avenida Manuel Rodríguez 1209',
+        comuna_despacho: firstRow.comuna_despacho || 'SAN FERNANDO',
+        ciudad_despacho: firstRow.ciudad_despacho || 'SAN FERNANDO',
+        nombre_chofer: firstRow.nombre_chofer || 'CRISTIAN MIRANDA',
+        rut_chofer: firstRow.rut_chofer || '18338934-3',
+        patente_vehiculo: firstRow.patente_vehiculo || 'CYPX-41',
+        direccion_destino: firstRow.direccion_destino || 'AV. LO ESPEJO 3200',
+        comuna_destino: firstRow.comuna_destino || 'CERILLOS',
+        rut_transportista: firstRow.rut_transportista || '18338934-3',
+        tipo_traslado: firstRow.tipo_traslado || 'TRASLADO: Otros traslados No Venta',
+        tipo_despacho: firstRow.tipo_despacho || 'Sin Despacho',
+        referencias: firstRow.referencias || 'Devoluciónnull',
+        subtotal,
+        iva,
+        total
+      };
+
+      const clientInfo = {
+        nombre: despachoObj.cliente_nombre,
+        rut_o_nit: despachoObj.cliente_rut,
+        giro: despachoObj.giro,
+        direccion: despachoObj.direccion_despacho,
+        comuna: despachoObj.comuna_despacho
+      };
+
+      await notifications.generateDespachoPDF(despachoObj, formattedItems, clientInfo);
+
+      generatedGuides.push({
+        id: gdId,
+        folio: folio,
+        pdf_url: `/api/despachos/${gdId}/pdf`,
+        total_items: formattedItems.length,
+        total: total
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `¡Procesamiento exitoso! Se generaron ${generatedGuides.length} Guía(s) de Despacho.`,
+      guias: generatedGuides
+    });
+  } catch (err) {
+    console.error('Error al generar guías desde Excel:', err);
+    res.status(500).json({ success: false, message: 'Error interno al generar las guías desde Excel.' });
   }
 });
 

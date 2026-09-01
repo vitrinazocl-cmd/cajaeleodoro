@@ -546,26 +546,134 @@ async function loadClientsERP() {
 
 function renderClientsTable(customers) {
   const tbody = document.getElementById('erp-clients-table-body');
+  const countText = document.getElementById('erp-clients-count-text');
   if (!tbody) return;
 
-  if (customers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No hay clientes registrados.</td></tr>`;
+  const total = AppState.customers ? AppState.customers.length : (customers ? customers.length : 0);
+  if (countText) {
+    if (customers && customers.length === total) {
+      countText.textContent = `${total} Clientes`;
+    } else {
+      countText.textContent = `${customers ? customers.length : 0} de ${total} Clientes`;
+    }
+  }
+
+  if (!customers || customers.length === 0) {
+    const searchVal = (document.getElementById('erp-clients-search')?.value || '').trim();
+    if (searchVal) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 32px; color:var(--text-muted);">
+        <span class="material-icons-round" style="font-size: 40px; display:block; margin-bottom:8px; opacity:0.4;">search_off</span>
+        No se encontraron clientes que coincidan con <strong>"${searchVal.replace(/</g, '&lt;').replace(/>/g, '&gt;')}"</strong>.
+      </td></tr>`;
+    } else {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--text-muted);">No hay clientes registrados.</td></tr>`;
+    }
     return;
   }
 
   tbody.innerHTML = customers.map(c => `
     <tr>
       <td><strong>${c.rut_o_nit}</strong></td>
-      <td>${c.nombre}</td>
-      <td>${c.telefono || 'N/A'}</td>
-      <td>${c.email || 'N/A'}</td>
-      <td>${c.direccion || 'N/A'}</td>
+      <td><span style="font-weight:600;">${c.nombre}</span></td>
+      <td>${c.telefono || '<span style="color:var(--text-muted);">N/A</span>'}</td>
+      <td>${c.email || '<span style="color:var(--text-muted);">N/A</span>'}</td>
+      <td>${c.direccion || '<span style="color:var(--text-muted);">N/A</span>'}</td>
       <td class="actions-cell">
-        <button class="btn-icon-secondary" onclick="openEditClientModal(${c.id})"><span class="material-icons-round" style="font-size:18px;">edit</span></button>
-        <button class="btn-icon-secondary" onclick="handleDeleteClient(${c.id})"><span class="material-icons-round" style="font-size:18px; color:var(--color-primary);">delete</span></button>
+        <div style="display: flex; gap: 6px; align-items: center; justify-content: flex-end;">
+          <button class="btn-secondary" onclick="openEditClientModal(${c.id})" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background: rgba(0, 112, 243, 0.18); color: #38bdf8; border: 1px solid rgba(0, 112, 243, 0.35); cursor: pointer;" title="Editar y actualizar datos de ${c.nombre.replace(/"/g, '&quot;')}">
+            <span class="material-icons-round" style="font-size: 15px;">edit</span> Editar
+          </button>
+          <button class="btn-secondary" onclick="handleDeleteClient(${c.id})" style="padding: 6px 10px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background: rgba(229, 9, 20, 0.12); color: #f87171; border: 1px solid rgba(229, 9, 20, 0.25); cursor: pointer;" title="Eliminar cliente">
+            <span class="material-icons-round" style="font-size: 15px;">delete</span>
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
+}
+
+// -------------------------------------------------------------
+// BUSCADOR INTELIGENTE DE CLIENTES (RUT, Nombre, Comuna, Teléfono, Email)
+// -------------------------------------------------------------
+function handleSmartClientSearch() {
+  const input = document.getElementById('erp-clients-search');
+  const clearBtn = document.getElementById('erp-clients-search-clear');
+  if (!input || !AppState.customers) return;
+
+  const query = input.value.trim();
+  if (clearBtn) {
+    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+  }
+
+  if (!query) {
+    renderClientsTable(AppState.customers);
+    return;
+  }
+
+  // Términos de búsqueda normalizados (sin tildes, en minúsculas)
+  const terms = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/\s+/)
+    .filter(t => t.length > 0);
+
+  const filtered = AppState.customers.filter(c => {
+    const rutClean = (c.rut_o_nit || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const rutRaw = (c.rut_o_nit || '').toLowerCase();
+    const nombreNorm = (c.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const dirNorm = (c.direccion || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const telNorm = (c.telefono || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const emailNorm = (c.email || '').toLowerCase();
+
+    return terms.every(term => {
+      const termClean = term.replace(/[^a-z0-9]/g, '');
+      return (
+        nombreNorm.includes(term) ||
+        dirNorm.includes(term) ||
+        emailNorm.includes(term) ||
+        rutRaw.includes(term) ||
+        (termClean.length > 0 && rutClean.includes(termClean)) ||
+        (termClean.length > 0 && telNorm.includes(termClean))
+      );
+    });
+  });
+
+  renderClientsTable(filtered);
+}
+
+// Escuchadores de eventos para el buscador inteligente
+document.addEventListener('DOMContentLoaded', () => {
+  const clientSearchInput = document.getElementById('erp-clients-search');
+  if (clientSearchInput) {
+    clientSearchInput.addEventListener('input', handleSmartClientSearch);
+  }
+  const clientSearchClear = document.getElementById('erp-clients-search-clear');
+  if (clientSearchClear) {
+    clientSearchClear.addEventListener('click', () => {
+      if (clientSearchInput) {
+        clientSearchInput.value = '';
+        handleSmartClientSearch();
+        clientSearchInput.focus();
+      }
+    });
+  }
+});
+
+// También enlazar inmediatamente por si el DOM ya cargó
+const clientSearchInput = document.getElementById('erp-clients-search');
+if (clientSearchInput) {
+  clientSearchInput.addEventListener('input', handleSmartClientSearch);
+}
+const clientSearchClear = document.getElementById('erp-clients-search-clear');
+if (clientSearchClear) {
+  clientSearchClear.addEventListener('click', () => {
+    if (clientSearchInput) {
+      clientSearchInput.value = '';
+      handleSmartClientSearch();
+      clientSearchInput.focus();
+    }
+  });
 }
 
 document.getElementById('btn-erp-new-client').addEventListener('click', () => {
