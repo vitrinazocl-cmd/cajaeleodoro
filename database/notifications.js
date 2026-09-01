@@ -361,7 +361,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Vendedor', 42, infoY + 64);
 
       doc.font('Helvetica').fontSize(8);
-      doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'Cliente General'}`, 100, infoY + 8, { width: 220, ellipsis: true });
+      doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'COMERCIAL ELEODORO SPA'}`, 100, infoY + 8, { width: 220, ellipsis: true });
       doc.text(`: ${despacho.direccion_despacho || clientInfo.direccion || 'Avenida Manuel Rodríguez 1209'}`, 100, infoY + 22, { width: 220, ellipsis: true });
       doc.text(`: ${despacho.comuna_despacho || clientInfo.comuna || 'SAN FERNANDO'}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);

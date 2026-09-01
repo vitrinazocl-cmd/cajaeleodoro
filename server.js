@@ -1504,7 +1504,7 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
   try {
     const sampleData = [
       {
-        "Señor(es) / Cliente": "CONSTANZA RIVEROS",
+        "Señor(es) / Cliente": "COMERCIAL ELEODORO SPA",
         "RUT Cliente": "78.256.573-7",
         "Dirección": "AV. LO ESPEJO 3200",
         "Comuna": "CERILLOS",
@@ -1526,7 +1526,7 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
         "Descuento": 0
       },
       {
-        "Señor(es) / Cliente": "CONSTANZA RIVEROS",
+        "Señor(es) / Cliente": "COMERCIAL ELEODORO SPA",
         "RUT Cliente": "78.256.573-7",
         "Dirección": "AV. LO ESPEJO 3200",
         "Comuna": "CERILLOS",
@@ -1681,7 +1681,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         id: gdId,
         folio,
         fecha_emision: new Date(),
-        cliente_nombre: firstRow.cliente_nombre || firstRow.senor_es || 'CONSTANZA RIVEROS',
+        cliente_nombre: firstRow.cliente_nombre || firstRow.senor_es || 'COMERCIAL ELEODORO SPA',
         cliente_rut: firstRow.cliente_rut || '78.256.573-7',
         giro: firstRow.giro || 'VENTA AL POR MAYOR',
         direccion_despacho: firstRow.direccion_despacho || 'Avenida Manuel Rodríguez 1209',
