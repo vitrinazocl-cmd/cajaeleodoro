@@ -1626,10 +1626,12 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 
       if (isPostgres) await db.query('BEGIN');
 
+      const itemVendedor = firstRow.vendedor || firstRow.vendedor_nombre || 'COMERCIALIZADORA ELEODORO';
+
       const gdInsertRes = await db.query(
         `INSERT INTO guias_despacho 
-         (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total, forma_pago)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total, forma_pago, vendedor)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING id`,
         [
           folio,
@@ -1645,7 +1647,8 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
           subtotal,
           iva,
           total,
-          itemFormaPago
+          itemFormaPago,
+          itemVendedor
         ]
       );
 
@@ -1690,6 +1693,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         tipo_despacho: firstRow.tipo_despacho || 'Sin Despacho',
         referencias: firstRow.referencias || 'Devoluciónnull',
         forma_pago: itemFormaPago,
+        vendedor: itemVendedor,
         subtotal,
         iva,
         total
@@ -1779,7 +1783,11 @@ app.listen(PORT, async () => {
 
   try {
     await db.query("ALTER TABLE guias_despacho ADD COLUMN forma_pago VARCHAR(50) DEFAULT 'Transferencia'");
-    console.log('[DB] Columna forma_pago verificada/creada en guias_despacho.');
+  } catch (err) {}
+
+  try {
+    await db.query("ALTER TABLE guias_despacho ADD COLUMN vendedor VARCHAR(150) DEFAULT 'COMERCIALIZADORA ELEODORO'");
+    console.log('[DB] Columna vendedor verificada/creada en guias_despacho.');
   } catch (err) {}
   
   // Ejecutar importación automática si el catálogo o clientes están vacíos

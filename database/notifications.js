@@ -346,9 +346,9 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('VENTA AL POR MAYOR Y MENOR DE BEBIDAS Y LICORES EN ALMACENES ESPECIALIZADOS', 35, emisorY + 14);
       doc.text('Av. Principal 4500, Oficina 201, Santiago', 35, emisorY + 24);
 
-      // --- 3. SECCIÓN CLIENTE Y DESTINATARIO (RECUADRO) ---
+      // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
       const infoY = 138;
-      const infoH = 80;
+      const infoH = 82;
       doc.rect(35, infoY, 535, infoH).lineWidth(0.7).stroke('#333333');
 
       doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
@@ -358,12 +358,16 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Dirección', 42, infoY + 22);
       doc.text('Comuna', 42, infoY + 36);
       doc.text('Condiciones', 42, infoY + 50);
+      doc.text('Vendedor', 42, infoY + 64);
 
       doc.font('Helvetica').fontSize(8);
       doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'Cliente General'}`, 100, infoY + 8, { width: 220, ellipsis: true });
       doc.text(`: ${despacho.direccion_despacho || clientInfo.direccion || 'Avenida Manuel Rodríguez 1209'}`, 100, infoY + 22, { width: 220, ellipsis: true });
       doc.text(`: ${despacho.comuna_despacho || clientInfo.comuna || 'SAN FERNANDO'}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);
+      doc.font('Helvetica-Bold');
+      doc.text(`: ${despacho.vendedor || 'COMERCIALIZADORA ELEODORO'}`, 100, infoY + 64, { width: 220, ellipsis: true });
+      doc.font('Helvetica');
 
       // Columna 2
       doc.font('Helvetica-Bold');
@@ -390,8 +394,8 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`: ${clientInfo.rut_o_nit || despacho.cliente_rut || '77.261.280-K'}`, 390, infoY + 22);
       doc.text(`: ${fechaStr}`, 390, infoY + 36);
 
-      // --- 4. SECCIÓN TRANSPORTE Y CHOFER (RECUADRO) ---
-      const transpY = infoY + infoH + 8;
+      // --- 4. RECUADRO 2: DATOS DEL TRANSPORTE Y CHOFER ---
+      const transpY = infoY + infoH + 6;
       const transpH = 65;
       doc.rect(35, transpY, 535, transpH).lineWidth(0.7).stroke('#333333');
 
@@ -401,26 +405,26 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Despacho', 42, transpY + 34);
       doc.text('Traslado', 42, transpY + 48);
 
-      doc.font('Helvetica');
-      doc.text(`: ${despacho.nombre_chofer || 'CRISTIAN MIRANDA'}`, 115, transpY + 6, { width: 180 });
+      doc.font('Helvetica').fontSize(8);
+      doc.text(`: ${despacho.nombre_chofer || 'CRISTIAN MIRANDA'}`, 115, transpY + 6, { width: 175, ellipsis: true });
       doc.text(`: ${despacho.rut_chofer || '18338934-3'}`, 115, transpY + 20);
       doc.text(`: ${despacho.tipo_despacho || 'Sin Despacho'}`, 115, transpY + 34);
-      doc.text(`: ${despacho.tipo_traslado || 'TRASLADO: Otros traslados No Venta'}`, 115, transpY + 48, { width: 180 });
+      doc.text(`: ${despacho.tipo_traslado || 'TRASLADO: Otros traslados No Venta'}`, 115, transpY + 48, { width: 175, ellipsis: true });
 
-      doc.font('Helvetica-Bold');
+      doc.font('Helvetica-Bold').fontSize(8);
       doc.text('Patente', 300, transpY + 6);
       doc.text('Dirección destino', 300, transpY + 20);
       doc.text('Comuna destino', 300, transpY + 34);
       doc.text('Rut Transportista', 300, transpY + 48);
 
-      doc.font('Helvetica');
+      doc.font('Helvetica').fontSize(8);
       doc.text(`: ${despacho.patente_vehiculo || 'CYPX-41'}`, 390, transpY + 6);
-      doc.text(`: ${despacho.direccion_destino || despacho.direccion_despacho || 'AV. LO ESPEJO 3200'}`, 390, transpY + 20, { width: 175 });
+      doc.text(`: ${despacho.direccion_destino || despacho.direccion_despacho || 'AV. LO ESPEJO 3200'}`, 390, transpY + 20, { width: 175, ellipsis: true });
       doc.text(`: ${despacho.comuna_destino || despacho.comuna_despacho || 'CERILLOS'}`, 390, transpY + 34);
       doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
 
       // --- 5. TABLA DE PRODUCTOS (HASTA 16 SKUs PER PAGE) ---
-      const tableY = transpY + transpH + 10;
+      const tableY = transpY + transpH + 8;
       const tableH = 18;
       
       doc.rect(35, tableY, 535, tableH).fill('#000000');
