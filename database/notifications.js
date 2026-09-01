@@ -571,7 +571,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       if (fs.existsSync(watermarkPath)) {
         try {
-          doc.image(watermarkPath, 390, 680, { width: 165 });
+          doc.image(watermarkPath, 410, 695, { fit: [150, 48] });
         } catch (e) {
           console.error('Error imprimiendo logo inferior:', e.message);
         }
