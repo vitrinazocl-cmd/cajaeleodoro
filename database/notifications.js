@@ -364,7 +364,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) {
         if (items && items[0] && items[0].vendedor) vendorVal = items[0].vendedor;
       }
-      if (!vendorVal || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Juan';
+      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Arantxa Perez';
 
       const emisorY = 85;
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);

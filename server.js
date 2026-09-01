@@ -1510,7 +1510,7 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
         "Comuna": "PUDAHUEL",
         "Ciudad": "SANTIAGO",
         "Giro": "VENTA AL POR MAYOR",
-        "Vendedor": "Juan",
+        "Vendedor": "Arantxa Perez",
         "Forma de Pago": "Transferencia",
         "Nombre Chofer": "CRISTIAN MIRANDA",
         "RUT Chofer": "17.647.463-8",
@@ -1532,7 +1532,7 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
         "Comuna": "PUDAHUEL",
         "Ciudad": "SANTIAGO",
         "Giro": "VENTA AL POR MAYOR",
-        "Vendedor": "Juan",
+        "Vendedor": "Arantxa Perez",
         "Forma de Pago": "Transferencia",
         "Nombre Chofer": "CRISTIAN MIRANDA",
         "RUT Chofer": "17.647.463-8",
@@ -1630,7 +1630,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 
       if (isPostgres) await db.query('BEGIN');
 
-      const itemVendedor = firstRow.vendedor || firstRow.VENDEDOR || firstRow.vendedor_nombre || firstRow.NOMBRE_VENDEDOR || firstRow.Vendedor || '-';
+      const itemVendedor = firstRow.vendedor || firstRow.VENDEDOR || firstRow.vendedor_nombre || firstRow.NOMBRE_VENDEDOR || firstRow.Vendedor || 'Arantxa Perez';
 
       const gdInsertRes = await db.query(
         `INSERT INTO guias_despacho 

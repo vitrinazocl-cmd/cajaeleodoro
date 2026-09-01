@@ -709,7 +709,7 @@ function processSelectedExcelFile(file) {
           codigo_sku: getValue("SKU", "Código SKU", "Código", "CODIGO", "SKU_PRODUCTO") || "PRD-1001",
           detalle_producto: getValue("DESCRIPCION", "Detalle Producto", "Detalle", "Producto", "DESCRIPCION_PRODUCTO") || "BEBIDA COCA COLA 1.5L RETORNABLE",
           forma_pago: getValue("FORMA_PAGO", "Forma de Pago", "METODO_PAGO", "Método de Pago", "PAGO", "Pago") || document.getElementById('despacho-forma-pago-select')?.value || "Transferencia",
-          vendedor: getValue("VENDEDOR", "Vendedor", "vendedor", "VENDEDOR_NOMBRE", "NOMBRE_VENDEDOR", "Vendedora", "VENDEDOR/A", "Vendedor/a", "EJECUTIVO", "Ejecutivo", "COD_VENDEDOR", "Cod Vendedor") || "-",
+          vendedor: getValue("VENDEDOR", "Vendedor", "vendedor", "VENDEDOR_NOMBRE", "NOMBRE_VENDEDOR", "Vendedora", "VENDEDOR/A", "Vendedor/a", "EJECUTIVO", "Ejecutivo", "COD_VENDEDOR", "Cod Vendedor") || "Arantxa Perez",
           cantidad: parseFloat(getValue("CANTIDAD", "Cantidad", "CANT") || 1),
           um: getValue("U.M.", "UM", "UNIDAD") || "UN",
           precio_unitario: parseFloat(getValue("PRECIO", "PRECIO_UNITARIO", "Precio Unitario", "Precio", "VALOR") || 0),
