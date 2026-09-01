@@ -611,25 +611,34 @@
                   <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;" id="dropzone-text-sub">Soporta formatos .xlsx y .xls (Máx. 500 filas)</div>
                 </div>
 
-                <!-- Selección de Modo de SKU por Guía -->
-                <div style="margin-top: 15px;">
-                  <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 8px;">Modo de Generación</label>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <label class="radio-mode-card" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">
-                      <input type="radio" name="sku-mode" value="1sku">
-                      <div>
-                        <strong style="display: block; font-size: 0.9rem;">1 SKU por Guía</strong>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Genera 1 PDF independiente por cada fila</span>
-                      </div>
-                    </label>
+                <!-- Selección de Modo y Método de Pago -->
+                <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div>
+                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 8px;">Modo de Generación</label>
+                    <div style="display: flex; gap: 8px;">
+                      <label class="radio-mode-card" style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">
+                        <input type="radio" name="sku-mode" value="1sku">
+                        <div>
+                          <strong style="display: block; font-size: 0.85rem;">1 SKU por Guía</strong>
+                        </div>
+                      </label>
 
-                    <label class="radio-mode-card active" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 2px solid var(--color-primary); cursor: pointer; background: rgba(229,9,20,0.08);">
-                      <input type="radio" name="sku-mode" value="16sku" checked>
-                      <div>
-                        <strong style="display: block; font-size: 0.9rem;">Hasta 16 SKU por Guía</strong>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Agrupa hasta 16 filas en la misma guía oficial</span>
-                      </div>
-                    </label>
+                      <label class="radio-mode-card active" style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid var(--color-primary); cursor: pointer; background: rgba(229,9,20,0.08);">
+                        <input type="radio" name="sku-mode" value="16sku" checked>
+                        <div>
+                          <strong style="display: block; font-size: 0.85rem;">Hasta 16 SKU</strong>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 8px;">Método de Pago (Separación de Archivos)</label>
+                    <select id="despacho-forma-pago-select" class="form-control" style="padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 100%; font-weight: 600;">
+                      <option value="Transferencia" selected>🏦 Transferencia Electrónica</option>
+                      <option value="Efectivo">💵 Efectivo</option>
+                      <option value="Tarjeta">💳 Tarjeta (Débito/Crédito)</option>
+                    </select>
                   </div>
                 </div>
 
@@ -670,11 +679,22 @@
 
             <!-- CONTENIDO 2: HISTORIAL DE GUÍAS EMITIDAS -->
             <div id="despacho-subtab-historial" class="despacho-subtab-content" style="display: none;">
-              <div class="table-header-actions">
-                <div class="search-box">
+              <div class="table-header-actions" style="gap: 10px; flex-wrap: wrap;">
+                <div class="search-box" style="flex: 1; min-width: 200px;">
                   <span class="material-icons-round">search</span>
                   <input type="text" id="erp-despachos-search" placeholder="Buscar guías por folio o cliente...">
                 </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Método Pago:</label>
+                  <select id="historial-filtro-pago" class="form-control" style="padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff;">
+                    <option value="TODAS">Todos</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                  </select>
+                </div>
+
                 <button class="btn-primary" id="btn-erp-new-despacho">
                   <span class="material-icons-round">add_circle</span> Emitir Guía Manual
                 </button>
@@ -687,13 +707,14 @@
                       <th>Cliente</th>
                       <th>RUT Cliente</th>
                       <th>Fecha Emisión</th>
+                      <th>Forma de Pago</th>
                       <th>Tipo Traslado</th>
                       <th>Total ($)</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody id="erp-despachos-table-body">
-                    <tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>
+                    <tr><td colspan="8" style="text-align:center;">Cargando guías de despacho...</td></tr>
                   </tbody>
                 </table>
               </div>

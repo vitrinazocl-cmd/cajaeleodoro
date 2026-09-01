@@ -18,6 +18,15 @@ function initDespachosModule() {
     });
   }
 
+  // Filtro por forma de pago
+  const filterPago = document.getElementById('historial-filtro-pago');
+  if (filterPago) {
+    filterPago.addEventListener('change', () => {
+      const q = document.getElementById('erp-despachos-search')?.value.toLowerCase().trim() || '';
+      filterDespachos(q);
+    });
+  }
+
   // Botón para nueva guía
   const newBtn = document.getElementById('btn-erp-new-despacho');
   if (newBtn) {
@@ -50,7 +59,7 @@ function initDespachosModule() {
 async function loadDespachos() {
   const tbody = document.getElementById('erp-despachos-table-body');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Cargando guías de despacho...</td></tr>`;
 
   try {
     const data = await apiFetch('/api/despachos');
@@ -69,20 +78,30 @@ function renderDespachosTable(despachos) {
   if (!tbody) return;
 
   if (despachos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No hay guías de despacho emitidas.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No hay guías de despacho emitidas.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = despachos.map(d => {
     const totalCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(d.total);
     const dateStr = new Date(d.fecha_emision).toLocaleString('es-CL');
+    
+    let pagoBadge = `<span class="badge" style="background: rgba(0, 123, 255, 0.15); color: #38ef7d; border: 1px solid rgba(0, 123, 255, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🏦 Transferencia</span>`;
+    const m = String(d.forma_pago || 'transferencia').toLowerCase();
+    if (m.includes('efectivo') || m.includes('cash')) {
+      pagoBadge = `<span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💵 Efectivo</span>`;
+    } else if (m.includes('tarjeta') || m.includes('card') || m.includes('debito') || m.includes('credito')) {
+      pagoBadge = `<span class="badge" style="background: rgba(111, 66, 193, 0.15); color: #d63384; border: 1px solid rgba(111, 66, 193, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💳 Tarjeta</span>`;
+    }
+
     return `
       <tr>
         <td><strong>${d.folio}</strong></td>
         <td>${d.cliente_nombre || 'Cliente General'}</td>
         <td>${d.cliente_rut || 'N/A'}</td>
         <td>${dateStr}</td>
-        <td><span class="badge" style="background-color: var(--color-bg); padding:4px 8px; border-radius:4px;">${d.tipo_traslado}</span></td>
+        <td>${pagoBadge}</td>
+        <td><span class="badge" style="background-color: rgba(255,255,255,0.08); padding:4px 8px; border-radius:4px;">${d.tipo_traslado || 'Venta'}</span></td>
         <td><strong>${totalCLP}</strong></td>
         <td class="actions-cell">
           <button class="btn-icon-secondary" title="Descargar PDF" onclick="downloadDespachoPDF(${d.id}, '${d.folio}')">
@@ -97,11 +116,24 @@ function renderDespachosTable(despachos) {
 // Filtrar guías localmente
 function filterDespachos(q) {
   if (!AppState.despachos) return;
-  const filtered = AppState.despachos.filter(d => 
-    d.folio.toLowerCase().includes(q) || 
-    (d.cliente_nombre && d.cliente_nombre.toLowerCase().includes(q)) ||
-    (d.cliente_rut && d.cliente_rut.toLowerCase().includes(q))
-  );
+  const pagoFiltro = document.getElementById('historial-filtro-pago')?.value || 'TODAS';
+
+  const filtered = AppState.despachos.filter(d => {
+    const matchQuery = d.folio.toLowerCase().includes(q) || 
+      (d.cliente_nombre && d.cliente_nombre.toLowerCase().includes(q)) ||
+      (d.cliente_rut && d.cliente_rut.toLowerCase().includes(q));
+
+    let matchPago = true;
+    if (pagoFiltro !== 'TODAS') {
+      const rawP = String(d.forma_pago || 'transferencia').toLowerCase();
+      if (pagoFiltro === 'Efectivo') matchPago = rawP.includes('efectivo');
+      else if (pagoFiltro === 'Tarjeta') matchPago = rawP.includes('tarjeta') || rawP.includes('debito') || rawP.includes('credito');
+      else if (pagoFiltro === 'Transferencia') matchPago = rawP.includes('transferencia');
+    }
+
+    return matchQuery && matchPago;
+  });
+
   renderDespachosTable(filtered);
 }
 
@@ -668,6 +700,7 @@ function processSelectedExcelFile(file) {
           rut_transportista: getValue("RUT_TRANSPORTISTA", "RUT Transportista", "RUT_CHOFER", "RUT Chofer") || "18338934-3",
           codigo_sku: getValue("SKU", "Código SKU", "Código", "CODIGO", "SKU_PRODUCTO") || "PRD-1001",
           detalle_producto: getValue("DESCRIPCION", "Detalle Producto", "Detalle", "Producto", "DESCRIPCION_PRODUCTO") || "BEBIDA COCA COLA 1.5L RETORNABLE",
+          forma_pago: getValue("FORMA_PAGO", "Forma de Pago", "METODO_PAGO", "Método de Pago", "PAGO", "Pago") || document.getElementById('despacho-forma-pago-select')?.value || "Transferencia",
           cantidad: parseFloat(getValue("CANTIDAD", "Cantidad", "CANT") || 1),
           um: getValue("U.M.", "UM", "UNIDAD") || "UN",
           precio_unitario: parseFloat(getValue("PRECIO", "PRECIO_UNITARIO", "Precio Unitario", "Precio", "VALOR") || 0),
@@ -744,6 +777,7 @@ async function handleStartRPAGeneration() {
   }
 
   const selectedMode = document.querySelector('input[name="sku-mode"]:checked')?.value || '16sku';
+  const selectedFormaPago = document.getElementById('despacho-forma-pago-select')?.value || 'Transferencia';
   const startBtn = document.getElementById('btn-start-rpa-generation');
   const startBtnTop = document.getElementById('btn-start-rpa-generation-top');
   
@@ -761,6 +795,7 @@ async function handleStartRPAGeneration() {
       method: 'POST',
       body: JSON.stringify({
         modo: selectedMode,
+        forma_pago: selectedFormaPago,
         items: ParsedExcelRows
       })
     });

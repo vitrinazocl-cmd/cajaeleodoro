@@ -1375,6 +1375,7 @@ app.post('/api/despachos', authenticateToken, async (req, res) => {
     nombre_chofer,
     direccion_despacho,
     comuna_despacho,
+    forma_pago,
     items
   } = req.body;
 
@@ -1402,10 +1403,10 @@ app.post('/api/despachos', authenticateToken, async (req, res) => {
     // 1. Insertar encabezado de la Guía
     const gdInsert = await db.query(
       `INSERT INTO guias_despacho 
-       (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total, forma_pago)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING id`,
-      [folio, fecha_traslado || new Date(), req.user.id || 1, cliente_id, tipo_traslado || 'Venta', patente_vehiculo || '', rut_chofer || '', nombre_chofer || '', direccion_despacho, comuna_despacho || '', subtotal, iva, total]
+      [folio, fecha_traslado || new Date(), req.user.id || 1, cliente_id, tipo_traslado || 'Venta', patente_vehiculo || '', rut_chofer || '', nombre_chofer || '', direccion_despacho, comuna_despacho || '', subtotal, iva, total, forma_pago || 'Transferencia']
     );
 
     const gdId = gdInsert.rows[0].id;
@@ -1563,7 +1564,7 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
 // GENERAR GUÍAS DE DESPACHO EN LOTE DESDE EXCEL
 // -------------------------------------------------------------
 app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, res) => {
-  const { modo, items } = req.body;
+  const { modo, forma_pago: globalFormaPago, items } = req.body;
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: 'No se enviaron filas de productos para procesar.' });
   }
@@ -1598,6 +1599,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
       const firstRow = group[0];
       const nextFolioNum = Math.floor(700000 + Math.random() * 90000);
       const folio = `GD-${nextFolioNum}`;
+      const itemFormaPago = firstRow.forma_pago || firstRow.metodo_pago || firstRow.pago || globalFormaPago || 'Transferencia';
 
       let subtotal = 0;
       const formattedItems = group.map((row, idx) => {
@@ -1626,8 +1628,8 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 
       const gdInsertRes = await db.query(
         `INSERT INTO guias_despacho 
-         (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         (folio, fecha_traslado, usuario_id, cliente_id, tipo_traslado, patente_vehiculo, rut_chofer, nombre_chofer, direccion_despacho, comuna_despacho, subtotal, iva, total, forma_pago)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING id`,
         [
           folio,
@@ -1642,7 +1644,8 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
           firstRow.comuna_despacho || 'SAN FERNANDO',
           subtotal,
           iva,
-          total
+          total,
+          itemFormaPago
         ]
       );
 
@@ -1686,6 +1689,7 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         tipo_traslado: firstRow.tipo_traslado || 'TRASLADO: Otros traslados No Venta',
         tipo_despacho: firstRow.tipo_despacho || 'Sin Despacho',
         referencias: firstRow.referencias || 'Devoluciónnull',
+        forma_pago: itemFormaPago,
         subtotal,
         iva,
         total
@@ -1724,12 +1728,22 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 app.get('/api/despachos/:id/pdf', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-    const gdRes = await db.query('SELECT folio FROM guias_despacho WHERE id = $1', [id]);
+    const gdRes = await db.query('SELECT folio, forma_pago FROM guias_despacho WHERE id = $1', [id]);
     if (gdRes.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Guía de despacho no encontrada.' });
     }
     const folio = gdRes.rows[0].folio;
-    const pdfPath = path.join(__dirname, 'exports', 'despachos', `${folio}.pdf`);
+    const rawMethod = String(gdRes.rows[0].forma_pago || 'transferencia').toLowerCase().trim();
+
+    let subfolder = 'transferencia';
+    if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) subfolder = 'efectivo';
+    else if (rawMethod.includes('tarjeta') || rawMethod.includes('card') || rawMethod.includes('debito') || rawMethod.includes('credito')) subfolder = 'tarjeta';
+
+    let pdfPath = path.join(__dirname, 'exports', 'despachos', subfolder, `${folio}.pdf`);
+    if (!fs.existsSync(pdfPath)) {
+      pdfPath = path.join(__dirname, 'exports', 'despachos', `${folio}.pdf`);
+    }
+
     if (!fs.existsSync(pdfPath)) {
       return res.status(404).json({ success: false, message: 'Archivo PDF no disponible en el servidor.' });
     }
@@ -1757,13 +1771,15 @@ app.listen(PORT, async () => {
   console.log(`🛡️  SEGURIDAD: JWT + Rate Limiting + CSP Activo`);
   console.log(`======================================================\n`);
   
-  // Asegurar existencia de la columna 'estado' en la tabla de productos para el toggle activo/agotado
+  // Asegurar existencia de las columnas requeridas en la base de datos
   try {
     await db.query("ALTER TABLE productos ADD COLUMN estado VARCHAR(20) DEFAULT 'activo'");
-    console.log('[DB] Columna de estado verificada/creada en productos.');
-  } catch (err) {
-    // Ignorar error si la columna ya existía
-  }
+  } catch (err) {}
+
+  try {
+    await db.query("ALTER TABLE guias_despacho ADD COLUMN forma_pago VARCHAR(50) DEFAULT 'Transferencia'");
+    console.log('[DB] Columna forma_pago verificada/creada en guias_despacho.');
+  } catch (err) {}
   
   // Ejecutar importación automática si el catálogo o clientes están vacíos
   autoImportCatalog();

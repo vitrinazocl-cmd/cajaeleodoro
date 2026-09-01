@@ -12,11 +12,17 @@ require('dotenv').config();
 const BOLETAS_DIR = path.join(__dirname, '..', 'exports', 'boletas');
 const COMPRAS_DIR = path.join(__dirname, '..', 'exports', 'compras');
 const DESPACHOS_DIR = path.join(__dirname, '..', 'exports', 'despachos');
+const DESPACHOS_EFECTIVO_DIR = path.join(DESPACHOS_DIR, 'efectivo');
+const DESPACHOS_TRANSFERENCIA_DIR = path.join(DESPACHOS_DIR, 'transferencia');
+const DESPACHOS_TARJETA_DIR = path.join(DESPACHOS_DIR, 'tarjeta');
 
 // Asegurar directorios
 if (!fs.existsSync(BOLETAS_DIR)) fs.mkdirSync(BOLETAS_DIR, { recursive: true });
 if (!fs.existsSync(COMPRAS_DIR)) fs.mkdirSync(COMPRAS_DIR, { recursive: true });
 if (!fs.existsSync(DESPACHOS_DIR)) fs.mkdirSync(DESPACHOS_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_EFECTIVO_DIR)) fs.mkdirSync(DESPACHOS_EFECTIVO_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_TRANSFERENCIA_DIR)) fs.mkdirSync(DESPACHOS_TRANSFERENCIA_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_TARJETA_DIR)) fs.mkdirSync(DESPACHOS_TARJETA_DIR, { recursive: true });
 
 // Formateador de moneda CLP
 const fmtCLP = (val) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
@@ -277,9 +283,28 @@ async function sendWhatsAppNotification(phoneNumber, message) {
 function generateDespachoPDF(despacho, items, clientInfo) {
   return new Promise((resolve, reject) => {
     try {
-      const pdfPath = path.join(DESPACHOS_DIR, `${despacho.folio}.pdf`);
+      // Determinar subcarpeta según método de pago (efectivo, transferencia, tarjeta)
+      let subDir = DESPACHOS_TRANSFERENCIA_DIR;
+      let rawMethod = String(despacho.forma_pago || despacho.formaPago || 'transferencia').toLowerCase().trim();
+
+      if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) {
+        subDir = DESPACHOS_EFECTIVO_DIR;
+        rawMethod = 'Efectivo';
+      } else if (rawMethod.includes('tarjeta') || rawMethod.includes('card') || rawMethod.includes('debito') || rawMethod.includes('débito') || rawMethod.includes('credito') || rawMethod.includes('crédito')) {
+        subDir = DESPACHOS_TARJETA_DIR;
+        rawMethod = 'Tarjeta';
+      } else {
+        subDir = DESPACHOS_TRANSFERENCIA_DIR;
+        rawMethod = 'Transferencia';
+      }
+
+      despacho.forma_pago = rawMethod;
+
+      const targetPdfPath = path.join(subDir, `${despacho.folio}.pdf`);
+      const fallbackPdfPath = path.join(DESPACHOS_DIR, `${despacho.folio}.pdf`);
+
       const doc = new PDFDocument({ size: 'LETTER', margins: { top: 35, bottom: 35, left: 35, right: 35 } });
-      const writeStream = fs.createWriteStream(pdfPath);
+      const writeStream = fs.createWriteStream(targetPdfPath);
       doc.pipe(writeStream);
 
       const logoPath = path.join(__dirname, '..', 'public', 'logo.jpg');
@@ -502,8 +527,11 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.end();
 
       writeStream.on('finish', () => {
-        console.log(`[PDF] Guía de Despacho PDF SII guardada en: exports/despachos/${despacho.folio}.pdf`);
-        resolve(pdfPath);
+        try {
+          fs.copyFileSync(targetPdfPath, fallbackPdfPath);
+        } catch (e) {}
+        console.log(`[PDF] Guía de Despacho PDF SII guardada en: ${targetPdfPath}`);
+        resolve(targetPdfPath);
       });
     } catch (err) {
       console.error('Error al generar PDF de Despacho:', err);
