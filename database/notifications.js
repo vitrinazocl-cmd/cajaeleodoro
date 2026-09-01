@@ -344,7 +344,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       const emisorY = 85;
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
       doc.fontSize(7.5).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 14);
-      doc.text('LAGUNA SUR 8383 A LA VINA IV, PUDAHUEL, SANTIAGO', 35, emisorY + 24);
+      doc.text('LAGUNA SUR #8383 PUDAHUEL, SANTIAGO', 35, emisorY + 24);
 
       // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
       const infoY = 138;
@@ -362,18 +362,18 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.font('Helvetica').fontSize(8);
       doc.text(`: ${clientInfo.nombre || despacho.cliente_nombre || 'COMERCIAL ELEODORO SPA'}`, 100, infoY + 8, { width: 220, ellipsis: true });
-      doc.text(`: ${despacho.direccion_despacho || clientInfo.direccion || 'Avenida Manuel Rodríguez 1209'}`, 100, infoY + 22, { width: 220, ellipsis: true });
-      doc.text(`: ${despacho.comuna_despacho || clientInfo.comuna || 'SAN FERNANDO'}`, 100, infoY + 36);
+      doc.text(`: ${despacho.direccion_despacho || clientInfo.direccion || 'Laguna Sur #8383 Pudahuel'}`, 100, infoY + 22, { width: 220, ellipsis: true });
+      doc.text(`: ${despacho.comuna_despacho || clientInfo.comuna || 'PUDAHUEL'}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);
       doc.font('Helvetica-Bold');
-      doc.text(`: ${despacho.vendedor || 'COMERCIALIZADORA ELEODORO'}`, 100, infoY + 64, { width: 220, ellipsis: true });
+      doc.text(`: ${despacho.vendedor || '-'}`, 100, infoY + 64, { width: 220, ellipsis: true });
       doc.font('Helvetica');
 
       // Columna 2
       doc.font('Helvetica-Bold');
       doc.text('Ciudad :', 220, infoY + 36);
       doc.font('Helvetica');
-      doc.text(`${despacho.ciudad_despacho || despacho.comuna_despacho || 'SAN FERNANDO'}`, 260, infoY + 36);
+      doc.text(`${despacho.ciudad_despacho || despacho.comuna_despacho || 'SANTIAGO'}`, 260, infoY + 36);
 
       doc.font('Helvetica-Bold');
       doc.text('Vencimiento :', 220, infoY + 50);
@@ -391,7 +391,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.font('Helvetica');
       doc.text(`: ${clientInfo.giro || despacho.giro || '-'}`, 390, infoY + 8, { width: 175 });
-      doc.text(`: ${clientInfo.rut_o_nit || despacho.cliente_rut || '77.261.280-K'}`, 390, infoY + 22);
+      doc.text(`: ${clientInfo.rut_o_nit || despacho.cliente_rut || '78.256.573-7'}`, 390, infoY + 22);
       doc.text(`: ${fechaStr}`, 390, infoY + 36);
 
       // --- 4. RECUADRO 2: DATOS DEL TRANSPORTE Y CHOFER ---
@@ -419,8 +419,8 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.font('Helvetica').fontSize(8);
       doc.text(`: ${despacho.patente_vehiculo || 'CYPX-41'}`, 390, transpY + 6);
-      doc.text(`: ${despacho.direccion_destino || despacho.direccion_despacho || 'AV. LO ESPEJO 3200'}`, 390, transpY + 20, { width: 175, ellipsis: true });
-      doc.text(`: ${despacho.comuna_destino || despacho.comuna_despacho || 'CERILLOS'}`, 390, transpY + 34);
+      doc.text(`: ${despacho.direccion_destino || despacho.direccion_despacho || 'Rene Oliva #1358 Cerro Navia'}`, 390, transpY + 20, { width: 175, ellipsis: true });
+      doc.text(`: ${despacho.comuna_destino || despacho.comuna_despacho || 'CERRO NAVIA'}`, 390, transpY + 34);
       doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
 
       // --- 5. TABLA DE PRODUCTOS (HASTA 16 SKUs PER PAGE) ---
