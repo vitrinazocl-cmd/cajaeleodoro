@@ -18,12 +18,30 @@ function initDespachosModule() {
     });
   }
 
-  // Filtro por forma de pago
+  // Búsqueda en Histórico Permanente
+  const searchHistoricoInput = document.getElementById('erp-historico-search');
+  if (searchHistoricoInput) {
+    searchHistoricoInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      filterHistoricoDespachos(q);
+    });
+  }
+
+  // Filtro por forma de pago historial
   const filterPago = document.getElementById('historial-filtro-pago');
   if (filterPago) {
     filterPago.addEventListener('change', () => {
       const q = document.getElementById('erp-despachos-search')?.value.toLowerCase().trim() || '';
       filterDespachos(q);
+    });
+  }
+
+  // Filtro por forma de pago histórico permanente
+  const filterPagoHistorico = document.getElementById('historico-filtro-pago');
+  if (filterPagoHistorico) {
+    filterPagoHistorico.addEventListener('change', () => {
+      const q = document.getElementById('erp-historico-search')?.value.toLowerCase().trim() || '';
+      filterHistoricoDespachos(q);
     });
   }
 
@@ -558,24 +576,28 @@ async function handleDespachoSubmit(e) {
 // FUNCIONALIDAD DASHBOARD GENERADOR DE GUÍAS EXCEL (RPA)
 // -------------------------------------------------------------
 
-// Cambiar pestaña secundaria en el módulo de Despachos
+// Cambiar pestaña secundaria en el módulo de Despachos (Dashboard, Historial, Histórico)
 function switchDespachoSubTab(tabName) {
   const dashTab = document.getElementById('despacho-subtab-dashboard');
   const histTab = document.getElementById('despacho-subtab-historial');
+  const histoTab = document.getElementById('despacho-subtab-historico');
+  
   const btnDash = document.getElementById('tab-btn-despacho-dashboard');
   const btnHist = document.getElementById('tab-btn-despacho-historial');
+  const btnHisto = document.getElementById('tab-btn-despacho-historico');
 
-  if (tabName === 'dashboard') {
-    if (dashTab) dashTab.style.display = 'block';
-    if (histTab) histTab.style.display = 'none';
-    if (btnDash) btnDash.classList.add('active');
-    if (btnHist) btnHist.classList.remove('active');
-  } else {
-    if (dashTab) dashTab.style.display = 'none';
-    if (histTab) histTab.style.display = 'block';
-    if (btnDash) btnDash.classList.remove('active');
-    if (btnHist) btnHist.classList.add('active');
+  if (dashTab) dashTab.style.display = tabName === 'dashboard' ? 'block' : 'none';
+  if (histTab) histTab.style.display = tabName === 'historial' ? 'block' : 'none';
+  if (histoTab) histoTab.style.display = tabName === 'historico' ? 'block' : 'none';
+
+  if (btnDash) btnDash.classList.toggle('active', tabName === 'dashboard');
+  if (btnHist) btnHist.classList.toggle('active', tabName === 'historial');
+  if (btnHisto) btnHisto.classList.toggle('active', tabName === 'historico');
+
+  if (tabName === 'historial') {
     loadDespachos();
+  } else if (tabName === 'historico') {
+    loadHistoricoDespachos();
   }
 }
 
@@ -840,4 +862,148 @@ async function handleStartRPAGeneration() {
       startBtnTop.innerHTML = `<span class="material-icons-round" style="font-size: 22px;">play_circle_filled</span> Generar Guías (PDF)`;
     }
   }
+}
+
+// -------------------------------------------------------------
+// FUNCIONALIDAD HISTÓRICO GUÍAS (REGISTRO PERMANENTE DE POR VIDA)
+// -------------------------------------------------------------
+let AppStateHistoricoDespachos = [];
+
+async function loadHistoricoDespachos() {
+  const tbody = document.getElementById('erp-historico-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">Cargando histórico de guías de por vida...</td></tr>`;
+
+  try {
+    const data = await apiFetch('/api/despachos/historico');
+    if (data.success) {
+      AppStateHistoricoDespachos = data.despachos || [];
+      
+      const countEl = document.getElementById('historico-count-guias');
+      if (countEl) countEl.innerText = AppStateHistoricoDespachos.length;
+
+      const mainVendedorEl = document.getElementById('historico-main-vendedor');
+      if (mainVendedorEl && AppStateHistoricoDespachos.length > 0) {
+        const lastVendor = AppStateHistoricoDespachos[0].vendedor;
+        if (lastVendor && lastVendor !== '-') mainVendedorEl.innerText = lastVendor;
+      }
+
+      renderHistoricoTable(AppStateHistoricoDespachos);
+    }
+  } catch (err) {
+    showToast('Error al cargar histórico permanente: ' + err.message, 'error');
+  }
+}
+
+function renderHistoricoTable(despachos) {
+  const tbody = document.getElementById('erp-historico-table-body');
+  if (!tbody) return;
+
+  if (!despachos || despachos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-muted);">No hay guías registradas en el histórico permanente.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = despachos.map(d => {
+    const totalCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(d.total);
+    const dateStr = new Date(d.fecha_emision).toLocaleString('es-CL');
+    
+    let pagoBadge = `<span class="badge" style="background: rgba(0, 123, 255, 0.15); color: #38ef7d; border: 1px solid rgba(0, 123, 255, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🏦 Transferencia</span>`;
+    const m = String(d.forma_pago || 'transferencia').toLowerCase();
+    if (m.includes('combinado') || m.includes('mixto')) {
+      pagoBadge = `<span class="badge" style="background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🔀 Pago Combinado</span>`;
+    } else if (m.includes('efectivo') || m.includes('cash')) {
+      pagoBadge = `<span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💵 Efectivo</span>`;
+    } else if (m.includes('tarjeta') || m.includes('card') || m.includes('debito') || m.includes('credito')) {
+      pagoBadge = `<span class="badge" style="background: rgba(111, 66, 193, 0.15); color: #d63384; border: 1px solid rgba(111, 66, 193, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💳 Tarjeta</span>`;
+    }
+
+    const vendorDisplay = d.vendedor && d.vendedor !== '-' ? d.vendedor : 'Arantxa Perez';
+    const choferDisplay = d.nombre_chofer ? `${d.nombre_chofer} (${d.patente_vehiculo || 'CYPX-41'})` : 'CRISTIAN MIRANDA (CYPX-41)';
+
+    return `
+      <tr>
+        <td><strong style="color:var(--text-muted);">#${d.id}</strong></td>
+        <td><strong style="color:#E50914;">${d.folio}</strong></td>
+        <td><strong>${d.cliente_nombre || 'COMERCIAL ELEODORO SPA'}</strong></td>
+        <td>${d.cliente_rut || '78.256.573-7'}</td>
+        <td><span class="badge" style="background:rgba(255,255,255,0.08); padding:4px 8px; border-radius:4px; font-weight:700; color:#fff;">👤 ${vendorDisplay}</span></td>
+        <td><small style="color:var(--text-muted);">${choferDisplay}</small></td>
+        <td><small>${dateStr}</small></td>
+        <td>${pagoBadge}</td>
+        <td><strong>${totalCLP}</strong></td>
+        <td class="actions-cell">
+          <button class="btn-icon-secondary" title="Descargar PDF Histórico" onclick="downloadDespachoPDF(${d.id}, '${d.folio}')">
+            <span class="material-icons-round" style="color:var(--color-primary);">picture_as_pdf</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterHistoricoDespachos(q) {
+  if (!AppStateHistoricoDespachos) return;
+  const pagoFiltro = document.getElementById('historico-filtro-pago')?.value || 'TODAS';
+
+  const filtered = AppStateHistoricoDespachos.filter(d => {
+    const textSearch = [
+      d.folio,
+      d.cliente_nombre,
+      d.cliente_rut,
+      d.vendedor,
+      d.nombre_chofer,
+      d.patente_vehiculo,
+      d.direccion_despacho,
+      d.comuna_despacho
+    ].join(' ').toLowerCase();
+
+    const matchQuery = textSearch.includes(q);
+
+    let matchPago = true;
+    if (pagoFiltro !== 'TODAS') {
+      const rawP = String(d.forma_pago || 'transferencia').toLowerCase();
+      if (pagoFiltro === 'Pago Combinado') matchPago = rawP.includes('combinado') || rawP.includes('mixto');
+      else if (pagoFiltro === 'Efectivo') matchPago = rawP.includes('efectivo');
+      else if (pagoFiltro === 'Tarjeta') matchPago = rawP.includes('tarjeta') || rawP.includes('debito') || rawP.includes('credito');
+      else if (pagoFiltro === 'Transferencia') matchPago = rawP.includes('transferencia');
+    }
+
+    return matchQuery && matchPago;
+  });
+
+  renderHistoricoTable(filtered);
+}
+
+function exportHistoricoExcel() {
+  if (!AppStateHistoricoDespachos || AppStateHistoricoDespachos.length === 0) {
+    showToast('No hay datos históricos para exportar.', 'warning');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    showToast('Cargando librería Excel...', 'info');
+    return;
+  }
+
+  const exportData = AppStateHistoricoDespachos.map(d => ({
+    "ID": d.id,
+    "Folio": d.folio,
+    "Cliente": d.cliente_nombre || 'COMERCIAL ELEODORO SPA',
+    "RUT Cliente": d.cliente_rut || '78.256.573-7',
+    "Vendedor": d.vendedor || 'Arantxa Perez',
+    "Chofer": d.nombre_chofer || 'CRISTIAN MIRANDA',
+    "Patente": d.patente_vehiculo || 'CYPX-41',
+    "Fecha Emisión": new Date(d.fecha_emision).toLocaleString('es-CL'),
+    "Forma de Pago": d.forma_pago || 'Transferencia',
+    "Subtotal ($)": d.subtotal || 0,
+    "IVA ($)": d.iva || 0,
+    "Total ($)": d.total || 0
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Historico_Guias");
+  XLSX.writeFile(workbook, `Historico_Guias_Despacho_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast('¡Histórico exportado a Excel exitosamente!', 'success');
 }

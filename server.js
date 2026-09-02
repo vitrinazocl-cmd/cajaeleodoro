@@ -1338,6 +1338,23 @@ app.get('/api/despachos', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint Histórico Permanente de Guías (Registro inalterable de por vida)
+app.get('/api/despachos/historico', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT g.*, c.nombre as cliente_nombre, c.rut_o_nit as cliente_rut, u.nombre as usuario_nombre
+       FROM guias_despacho g
+       LEFT JOIN clientes c ON g.cliente_id = c.id
+       LEFT JOIN usuarios u ON g.usuario_id = u.id
+       ORDER BY g.id DESC`
+    );
+    res.json({ success: true, count: result.rows.length, despachos: result.rows });
+  } catch (err) {
+    console.error('Error al obtener histórico permanente de despachos:', err);
+    res.status(500).json({ success: false, message: 'Error al obtener histórico permanente de despachos en el servidor.' });
+  }
+});
+
 app.get('/api/despachos/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {

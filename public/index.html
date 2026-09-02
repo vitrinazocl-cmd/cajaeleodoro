@@ -572,12 +572,15 @@
           <div class="erp-container" style="max-width: 1000px; margin: 0 auto;">
             
             <!-- Selector de Pestañas dentro del Módulo -->
-            <div style="display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; flex-wrap: wrap;">
               <button type="button" class="btn-tab active" id="tab-btn-despacho-dashboard" onclick="switchDespachoSubTab('dashboard')">
                 <span class="material-icons-round">dashboard</span> Generador por Excel (RPA)
               </button>
               <button type="button" class="btn-tab" id="tab-btn-despacho-historial" onclick="switchDespachoSubTab('historial')">
                 <span class="material-icons-round">history</span> Historial de Guías Emitidas
+              </button>
+              <button type="button" class="btn-tab" id="tab-btn-despacho-historico" onclick="switchDespachoSubTab('historico')">
+                <span class="material-icons-round">inventory_2</span> Histórico Guías (Permanente)
               </button>
             </div>
 
@@ -717,6 +720,83 @@
                   </thead>
                   <tbody id="erp-despachos-table-body">
                     <tr><td colspan="8" style="text-align:center;">Cargando guías de despacho...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- CONTENIDO 3: HISTÓRICO GUÍAS (REGISTRO PERMANENTE DE POR VIDA) -->
+            <div id="despacho-subtab-historico" class="despacho-subtab-content" style="display: none;">
+              <!-- Banner Garantía de Datos Inalterables -->
+              <div style="background: linear-gradient(135deg, rgba(229, 9, 20, 0.18) 0%, rgba(20, 20, 20, 0.9) 100%); border: 1px solid rgba(229, 9, 20, 0.4); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <span class="material-icons-round" style="font-size: 36px; color: #ff4b5c; background: rgba(255,75,92,0.15); padding: 8px; border-radius: 10px;">lock_clock</span>
+                  <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">🔒 REGISTRO HISTÓRICO PERMANENTE E INALTERABLE</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                      Auditoría de por vida de <strong>TODAS</strong> las Guías de Despacho emitidas por este software. Este registro acumula perpetuamente cada documento emitido y <strong>nunca se reinicia ni se vacía</strong>.
+                    </p>
+                  </div>
+                </div>
+                <button type="button" class="btn-secondary" id="btn-export-historico-excel" onclick="exportHistoricoExcel()" style="display: flex; align-items: center; gap: 8px; background-color: #2e7d32; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(46,125,50,0.3);">
+                  <span class="material-icons-round" style="font-size: 20px;">download</span> Exportar Histórico (Excel)
+                </button>
+              </div>
+
+              <!-- Estadísticas de Resumen -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                <div class="card-glass" style="padding: 14px 18px; border-radius: 12px; border-left: 4px solid #E50914;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Guías en la Historia</span>
+                  <h3 style="font-size: 1.4rem; font-weight: 800; margin: 4px 0 0 0; color: #fff;" id="historico-count-guias">0</h3>
+                </div>
+                <div class="card-glass" style="padding: 14px 18px; border-radius: 12px; border-left: 4px solid #38ef7d;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Vendedor Principal</span>
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0; color: #38ef7d;" id="historico-main-vendedor">Arantxa Perez</h3>
+                </div>
+                <div class="card-glass" style="padding: 14px 18px; border-radius: 12px; border-left: 4px solid #ffc107;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Estado del Registro</span>
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin: 4px 0 0 0; color: #ffc107;">🔒 100% Persistente</h3>
+                </div>
+              </div>
+
+              <!-- Filtros de búsqueda -->
+              <div class="table-header-actions" style="gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <div class="search-box" style="flex: 1; min-width: 260px;">
+                  <span class="material-icons-round">search</span>
+                  <input type="text" id="erp-historico-search" placeholder="🔍 Buscar en el histórico por Folio, Cliente, RUT, Vendedor, Chofer...">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Método Pago:</label>
+                  <select id="historico-filtro-pago" class="form-control" style="padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff;">
+                    <option value="TODAS">Todos los Métodos</option>
+                    <option value="Efectivo">🟢 Efectivo</option>
+                    <option value="Transferencia">🔵 Transferencia</option>
+                    <option value="Tarjeta">🟣 Tarjeta</option>
+                    <option value="Pago Combinado">🔀 Pago Combinado</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tabla Histórica Completa -->
+              <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                <table class="erp-table">
+                  <thead>
+                    <tr>
+                      <th># ID</th>
+                      <th>Folio</th>
+                      <th>Cliente (Señor(es))</th>
+                      <th>RUT Cliente</th>
+                      <th>Vendedor</th>
+                      <th>Chofer / Patente</th>
+                      <th>Fecha Emisión</th>
+                      <th>Forma de Pago</th>
+                      <th>Total ($)</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="erp-historico-table-body">
+                    <tr><td colspan="10" style="text-align:center;">Cargando histórico de guías de por vida...</td></tr>
                   </tbody>
                 </table>
               </div>
