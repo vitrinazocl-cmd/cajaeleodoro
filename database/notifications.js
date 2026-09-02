@@ -333,9 +333,15 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.fillColor('#000000');
 
       // --- 2. DATOS DEL EMISOR CON LOGO ---
-      if (fs.existsSync(logoPath)) {
+      const headerLogoPath = fs.existsSync(path.join(__dirname, '..', 'public', 'logo.png'))
+        ? path.join(__dirname, '..', 'public', 'logo.png')
+        : (fs.existsSync(path.join(__dirname, '..', 'public', 'logo.jpg'))
+            ? path.join(__dirname, '..', 'public', 'logo.jpg')
+            : path.join(__dirname, 'logo.jpg'));
+
+      if (fs.existsSync(headerLogoPath)) {
         try {
-          doc.image(logoPath, 35, 30, { width: 120, height: 50 });
+          doc.image(headerLogoPath, 35, 30, { fit: [120, 50] });
         } catch (e) {
           console.error('Error cargando logo en PDF:', e.message);
         }
@@ -565,9 +571,11 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('www.eleodoroelgrande.cl', 35, webY + 10, { width: 350, align: 'center' });
 
       // Logo impreso en la esquina inferior derecha (a la derecha del sitio web)
-      const watermarkPath = fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.jpg'))
-        ? path.join(__dirname, '..', 'public', 'sello_agua.jpg')
-        : path.join(__dirname, 'sello_agua.jpg');
+      const watermarkPath = fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.png'))
+        ? path.join(__dirname, '..', 'public', 'sello_agua.png')
+        : (fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.jpg'))
+            ? path.join(__dirname, '..', 'public', 'sello_agua.jpg')
+            : headerLogoPath);
 
       if (fs.existsSync(watermarkPath)) {
         try {
