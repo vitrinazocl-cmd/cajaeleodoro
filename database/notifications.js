@@ -565,11 +565,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`Total:`, 438, timbreY + 60);
       doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 60, { width: 85, align: 'right' });
 
-      // Pie de página sitio web oficial (Alineado a la izquierda)
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#E50914');
-      doc.text('www.eleodoroelgrande.cl', 35, 710, { width: 250, align: 'center' });
-
-      // Logo impreso al doble de tamaño en la esquina inferior derecha
+      // Logo centrado en el pie de página
       const watermarkPath = fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.png'))
         ? path.join(__dirname, '..', 'public', 'sello_agua.png')
         : (fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.jpg'))
@@ -578,11 +574,15 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       if (fs.existsSync(watermarkPath)) {
         try {
-          doc.image(watermarkPath, 290, 665, { fit: [280, 90] });
+          doc.image(watermarkPath, 176, 665, { fit: [260, 70] });
         } catch (e) {
           console.error('Error imprimiendo logo inferior:', e.message);
         }
       }
+
+      // Sitio web oficial centrado justo abajo del logo
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#E50914');
+      doc.text('www.eleodoroelgrande.cl', 35, 742, { width: 535, align: 'center' });
 
       doc.end();
 
