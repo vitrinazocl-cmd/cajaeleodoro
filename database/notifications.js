@@ -448,12 +448,24 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`: ${driverComunaDestino}`, 390, transpY + 34);
       doc.text(`: ${despacho.rut_transportista || driverRutVal}`, 390, transpY + 48);
 
-      doc.fillColor('#000000').font('Helvetica');
-      let itemY = tableY + 20;
-      let totalCantidadBultos = 0;
+      // --- 5. ENCABEZADO DE TABLA DE PRODUCTOS ---
+      const tableY = transpY + transpH + 8;
+      const tableH = 16;
+      doc.rect(35, tableY, 535, tableH).fill('#111111');
+      
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(7.5);
+      doc.text('No.', 38, tableY + 4, { width: 22 });
+      doc.text('Código', 62, tableY + 4, { width: 55 });
+      doc.text('Detalle', 120, tableY + 4, { width: 250 });
+      doc.text('Cantidad', 375, tableY + 4, { width: 45, align: 'center' });
+      doc.text('U.M.', 425, tableY + 4, { width: 30, align: 'center' });
+      doc.text('Precio', 460, tableY + 4, { width: 45, align: 'right' });
+      doc.text('Descto', 510, tableY + 4, { width: 25, align: 'right' });
+      doc.text('Total', 538, tableY + 4, { width: 28, align: 'right' });
 
-      doc.fillColor('#000000').font('Helvetica').fontSize(7.5);
-      let itemY = tableY + tableH;
+      doc.fillColor('#000000').font('Helvetica');
+      let itemY = tableY + tableH + 2;
+      let totalCantidadBultos = 0;
 
       // Limitar a máximo 16 SKUs para asegurar formato estricto de 1 sola página
       const pageItems = items.slice(0, 16);
@@ -462,33 +474,38 @@ function generateDespachoPDF(despacho, items, clientInfo) {
         const lineNo = index + 1;
         const rowH = 14;
         if (index % 2 === 1) {
-          doc.rect(35, itemY, 535, rowH).fill('#f7f7f7');
+          doc.rect(35, itemY - 2, 535, rowH).fill('#f7f7f7');
           doc.fillColor('#000000');
         }
         
         const cantVal = parseFloat(item.cantidad) || 0;
         totalCantidadBultos += cantVal;
 
-        doc.text(item.codigo || `P-${item.producto_id}`, 45, itemY + 5);
-        doc.text(item.nombre || item.producto_nombre || 'Producto', 120, itemY + 5, { width: 250, ellipsis: true });
-        doc.text(String(cantVal), 380, itemY + 5, { width: 50, align: 'center' });
-        doc.text(fmtCLP(item.precio_unitario), 440, itemY + 5, { width: 50, align: 'right' });
-        doc.text(fmtCLP(item.subtotal), 500, itemY + 5, { width: 60, align: 'right' });
+        doc.fontSize(7.5);
+        doc.text(String(lineNo), 38, itemY, { width: 20 });
+        doc.text(item.codigo || `P-${item.producto_id || lineNo}`, 62, itemY, { width: 55, ellipsis: true });
+        doc.text(item.nombre || item.producto_nombre || 'Producto', 120, itemY, { width: 250, ellipsis: true });
+        doc.text(cantVal.toLocaleString('es-CL'), 375, itemY, { width: 45, align: 'center' });
+        doc.text(item.um || 'UN', 425, itemY, { width: 30, align: 'center' });
+        doc.text(fmtCLP(item.precio_unitario || 0), 460, itemY, { width: 45, align: 'right' });
+        doc.text(fmtCLP(item.descuento || 0), 510, itemY, { width: 25, align: 'right' });
+        doc.text(fmtCLP(item.subtotal || 0), 538, itemY, { width: 28, align: 'right' });
         
-        itemY += 18;
+        itemY += 15;
       });
 
       // Fila Destacada: SUMA TOTAL DE CANTIDADES
-      doc.rect(40, itemY, 530, 20).fill('#e6ecf5');
+      doc.rect(35, itemY, 535, 18).fill('#e6ecf5');
       doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8.5);
-      doc.text('SUMA TOTAL DE CANTIDADES (BULTOS):', 45, itemY + 5);
-      doc.fillColor('#E50914').text(`${totalCantidadBultos.toLocaleString('es-CL')} UNIDADES`, 350, itemY + 5, { width: 100, align: 'center' });
+      doc.text('SUMA TOTAL DE CANTIDADES (BULTOS):', 45, itemY + 4);
+      doc.fillColor('#E50914').text(`${totalCantidadBultos.toLocaleString('es-CL')} UNIDADES`, 350, itemY + 4, { width: 150, align: 'center' });
       
-      itemY += 20;
-      doc.rect(40, itemY, 530, 0.5).stroke('#cccccc');
+      itemY += 22;
+      doc.rect(35, itemY, 535, 0.5).stroke('#cccccc');
 
-      // --- 5. RESUMEN DE TOTALES ---
-      const totalsY = itemY + 15;
+      // --- 6. RESUMEN DE TOTALES Y PIE DE PÁGINA ---
+      const footerY = 530;
+      const totalsY = footerY - 18;
       doc.font('Helvetica-Bold').fontSize(9).fillColor('#000000');
       doc.text('NETO:', 420, totalsY, { width: 70, align: 'left' });
       doc.text(fmtCLP(despacho.subtotal), 500, totalsY, { width: 70, align: 'right' });

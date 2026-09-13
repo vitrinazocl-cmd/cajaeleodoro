@@ -1767,7 +1767,8 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
     res.json({
       success: true,
       message: `¡Procesamiento exitoso! Se generaron ${generatedGuides.length} Guía(s) de Despacho.`,
-      guias: generatedGuides
+      guias: generatedGuides,
+      generated_guides: generatedGuides
     });
   } catch (err) {
     console.error('Error al generar guías desde Excel:', err);

@@ -994,11 +994,13 @@ async function triggerGenerateExcelGuides() {
       })
     });
 
-    if (res.success && res.generated_guides && res.generated_guides.length > 0) {
-      showToast(`¡Éxito! ${res.generated_guides.length} Guía(s) PDF generada(s) con chofer "${data.driver.nombre}"`, 'success');
+    const guiasList = res.generated_guides || res.guias || [];
+
+    if (res.success && guiasList.length > 0) {
+      showToast(`¡Éxito! ${guiasList.length} Guía(s) PDF generada(s) con chofer "${data.driver.nombre}"`, 'success');
       
       // Abrir o descargar el primer PDF generado
-      res.generated_guides.forEach((g, idx) => {
+      guiasList.forEach((g, idx) => {
         setTimeout(() => {
           downloadDespachoPDF(g.id, g.folio);
         }, idx * 600);
