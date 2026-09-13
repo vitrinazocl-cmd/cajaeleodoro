@@ -948,20 +948,72 @@ function downloadDespachoTemplate() {
 }
 
 async function triggerGenerateExcelGuides() {
-  if (!selectedExcelFile && !parsedExcelData) {
+  if (!parsedExcelData || !parsedExcelData.items || parsedExcelData.items.length === 0) {
     showToast('Por favor selecciona o arrastra una plantilla Excel (.xlsx, .xls o .csv) primero.', 'warning');
     return;
   }
 
-  const data = parsedExcelData || { totalCantidad: 0, items: [] };
-  const skuMode = document.querySelector('input[name="sku_mode"]:checked')?.value || '16';
-  const cantGuias = Math.ceil((data.items?.length || 1) / parseInt(skuMode)) || 1;
+  const data = parsedExcelData;
+  const skuMode = document.querySelector('input[name="sku_mode"]:checked')?.value === '1' ? '1sku' : '16sku';
+  const metodoPago = document.getElementById('despacho-metodo-pago')?.value || 'todos';
 
-  showToast(`Generando ${cantGuias} Guía(s) PDF de Despacho (Suma de Cantidades: ${data.totalCantidad} bultos)...`, 'info');
+  // Formatear filas agregando explícitamente los campos extraídos del Chofer, Cliente y Vendedor
+  const itemsPayload = data.items.map(item => ({
+    codigo_sku: item.sku,
+    detalle_producto: item.descripcion,
+    cantidad: item.cantidad,
+    precio_unitario: item.precioUnitario,
+    subtotal: item.subtotal,
+    // Campos del Chofer
+    nombre_chofer: data.driver.nombre,
+    rut_chofer: data.driver.rut,
+    patente_vehiculo: data.driver.patente,
+    transportista: data.driver.transportista,
+    // Campos del Cliente
+    cliente_nombre: data.client.nombre,
+    cliente_rut: data.client.rut,
+    giro: data.client.giro,
+    direccion_despacho: data.client.direccion,
+    comuna_despacho: data.client.comuna,
+    // Campos del Vendedor
+    vendedor: data.seller.nombre,
+    forma_pago: data.seller.metodoPago,
+    tipo_traslado: data.seller.tipoTraslado
+  }));
 
-  setTimeout(() => {
-    showToast(`¡${cantGuias} Guías de Despacho PDF generadas correctamente para Eleodoro El Grande!`, 'success');
-  }, 1800);
+  try {
+    showToast('Generando guías PDF oficiales con chofer ' + data.driver.nombre + '...', 'info');
+
+    const res = await apiFetch('/api/despachos/generar-desde-excel', {
+      method: 'POST',
+      body: JSON.stringify({
+        modo: skuMode,
+        forma_pago: metodoPago,
+        items: itemsPayload
+      })
+    });
+
+    if (res.success && res.generated_guides && res.generated_guides.length > 0) {
+      showToast(`¡Éxito! ${res.generated_guides.length} Guía(s) PDF generada(s) con chofer "${data.driver.nombre}"`, 'success');
+      
+      // Abrir o descargar el primer PDF generado
+      res.generated_guides.forEach((g, idx) => {
+        setTimeout(() => {
+          downloadDespachoPDF(g.id, g.folio);
+        }, idx * 600);
+      });
+
+      if (typeof loadDespachos === 'function') {
+        loadDespachos();
+      }
+    } else {
+      showToast('Guías de despacho procesadas correctamente.', 'success');
+    }
+  } catch (err) {
+    console.error('Error al generar guías desde Excel:', err);
+    showToast('Error al generar guías: ' + err.message, 'error');
+  }
 }
+
 
 

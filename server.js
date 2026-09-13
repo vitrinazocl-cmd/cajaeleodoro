@@ -1521,45 +1521,45 @@ app.get('/api/despachos/plantilla-excel', authenticateToken, (req, res) => {
   try {
     const sampleData = [
       {
-        "Señor(es) / Cliente": "COMERCIAL ELEODORO SPA",
-        "RUT Cliente": "78.256.573-7",
-        "Dirección": "Laguna Sur #8383 Pudahuel",
-        "Comuna": "PUDAHUEL",
+        "Señor(es) / Cliente": "CLIENTE EJEMPLO SPA",
+        "RUT Cliente": "77.888.999-0",
+        "Dirección": "Av. Principal #123",
+        "Comuna": "SANTIAGO",
         "Ciudad": "SANTIAGO",
-        "Giro": "VENTA AL POR MAYOR",
-        "Vendedor": "Arantxa Perez",
+        "Giro": "VENTA Y DISTRIBUCION",
+        "Vendedor": "VENDEDOR CENTRAL",
         "Forma de Pago": "Transferencia",
-        "Nombre Chofer": "CRISTIAN MIRANDA",
-        "RUT Chofer": "17.647.463-8",
-        "Patente": "CYPX-41",
-        "Dirección Destino": "Rene Oliva #1358 Cerro Navia",
-        "Comuna Destino": "CERRO NAVIA",
-        "RUT Transportista": "17.647.463-8",
+        "Nombre Chofer": "CHOFER ASIGNADO",
+        "RUT Chofer": "15.666.777-8",
+        "Patente": "AA-BB-12",
+        "Dirección Destino": "Av. Principal #123",
+        "Comuna Destino": "SANTIAGO",
+        "RUT Transportista": "15.666.777-8",
         "Código SKU": "PRD-1001",
         "Detalle Producto": "BEBIDA COCA COLA 1.5L RETORNABLE",
-        "Cantidad": 1,
+        "Cantidad": 10,
         "U.M.": "UN",
         "Precio Unitario": 1200,
         "Descuento": 0
       },
       {
-        "Señor(es) / Cliente": "COMERCIAL ELEODORO SPA",
-        "RUT Cliente": "78.256.573-7",
-        "Dirección": "Laguna Sur #8383 Pudahuel",
-        "Comuna": "PUDAHUEL",
+        "Señor(es) / Cliente": "CLIENTE EJEMPLO SPA",
+        "RUT Cliente": "77.888.999-0",
+        "Dirección": "Av. Principal #123",
+        "Comuna": "SANTIAGO",
         "Ciudad": "SANTIAGO",
-        "Giro": "VENTA AL POR MAYOR",
-        "Vendedor": "Arantxa Perez",
+        "Giro": "VENTA Y DISTRIBUCION",
+        "Vendedor": "VENDEDOR CENTRAL",
         "Forma de Pago": "Transferencia",
-        "Nombre Chofer": "CRISTIAN MIRANDA",
-        "RUT Chofer": "17.647.463-8",
-        "Patente": "CYPX-41",
-        "Dirección Destino": "Rene Oliva #1358 Cerro Navia",
-        "Comuna Destino": "CERRO NAVIA",
-        "RUT Transportista": "17.647.463-8",
+        "Nombre Chofer": "CHOFER ASIGNADO",
+        "RUT Chofer": "15.666.777-8",
+        "Patente": "AA-BB-12",
+        "Dirección Destino": "Av. Principal #123",
+        "Comuna Destino": "SANTIAGO",
+        "RUT Transportista": "15.666.777-8",
         "Código SKU": "PRD-1002",
         "Detalle Producto": "CERVEZA CORONA 330CC PACK 24",
-        "Cantidad": 1,
+        "Cantidad": 5,
         "U.M.": "UN",
         "Precio Unitario": 18500,
         "Descuento": 0
@@ -1647,7 +1647,31 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
 
       if (isPostgres) await db.query('BEGIN');
 
-      const itemVendedor = firstRow.vendedor || firstRow.VENDEDOR || firstRow.vendedor_nombre || firstRow.NOMBRE_VENDEDOR || firstRow.Vendedor || 'Arantxa Perez';
+      // Helper para extraer campos dinámicos sin nombres hardcodeados
+      const extractField = (rowObj, candidates, fallbackVal = '') => {
+        if (!rowObj || typeof rowObj !== 'object') return fallbackVal;
+        for (const key of Object.keys(rowObj)) {
+          const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+          for (const cand of candidates) {
+            if (cleanKey.includes(cand.toUpperCase())) {
+              const val = String(rowObj[key] || '').trim();
+              if (val) return val;
+            }
+          }
+        }
+        return fallbackVal;
+      };
+
+      const nombreChofer = extractField(firstRow, ['nombre_chofer', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'Nombre Chofer', 'NOMBRE_CHOFER'], 'Chofer no especificado');
+      const rutChofer = extractField(firstRow, ['rut_chofer', 'RUT_CHOFER', 'rut_conductor', 'RUT Chofer', 'RUT_CONDUCTOR'], 'N/A');
+      const patenteVehiculo = extractField(firstRow, ['patente_vehiculo', 'PATENTE', 'VEHICULO', 'Patente'], 'N/A');
+
+      const clienteNombre = extractField(firstRow, ['cliente_nombre', 'NOMBRE_CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'Señor(es) / Cliente', 'RECEPTOR'], 'Cliente General');
+      const clienteRut = extractField(firstRow, ['cliente_rut', 'RUT_CLIENTE', 'RUT', 'RUT Cliente', 'NIT'], 'N/A');
+      const giroCliente = extractField(firstRow, ['giro', 'GIRO_CLIENTE', 'GIRO', 'Giro'], 'Comercial / Venta Bebidas');
+      const direccionDespacho = extractField(firstRow, ['direccion_despacho', 'DIRECCION_DESPACHO', 'DIRECCION', 'Dirección', 'Dirección Destino'], 'Dirección de Despacho');
+      const comunaDespacho = extractField(firstRow, ['comuna_despacho', 'COMUNA', 'Comuna', 'Comuna Destino'], 'Santiago');
+      const itemVendedor = extractField(firstRow, ['vendedor', 'NOMBRE_VENDEDOR', 'VENDEDOR', 'Vendedor', 'CODIGO_VENDEDOR'], 'Vendedor Central');
 
       const gdInsertRes = await db.query(
         `INSERT INTO guias_despacho 
@@ -1659,12 +1683,12 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
           new Date(),
           req.user ? req.user.id : 1,
           1,
-          firstRow.tipo_traslado || 'TRASLADO: Otros traslados No Venta',
-          firstRow.patente_vehiculo || 'CYPX-41',
-          firstRow.rut_chofer || '18338934-3',
-          firstRow.nombre_chofer || 'CRISTIAN MIRANDA',
-          firstRow.direccion_despacho || 'Laguna Sur #8383 Pudahuel',
-          firstRow.comuna_despacho || 'PUDAHUEL',
+          firstRow.tipo_traslado || 'Venta',
+          patenteVehiculo,
+          rutChofer,
+          nombreChofer,
+          direccionDespacho,
+          comunaDespacho,
           subtotal,
           iva,
           total,
@@ -1698,21 +1722,21 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         id: gdId,
         folio,
         fecha_emision: new Date(),
-        cliente_nombre: 'COMERCIAL ELEODORO SPA',
-        cliente_rut: firstRow.cliente_rut || '78.256.573-7',
-        giro: firstRow.giro || 'VENTA AL POR MAYOR',
-        direccion_despacho: firstRow.direccion_despacho || 'Laguna Sur #8383 Pudahuel',
-        comuna_despacho: firstRow.comuna_despacho || 'PUDAHUEL',
-        ciudad_despacho: firstRow.ciudad_despacho || 'SANTIAGO',
-        nombre_chofer: firstRow.nombre_chofer || 'CRISTIAN MIRANDA',
-        rut_chofer: firstRow.rut_chofer || '18338934-3',
-        patente_vehiculo: firstRow.patente_vehiculo || 'CYPX-41',
-        direccion_destino: firstRow.direccion_destino || 'Rene Oliva #1358 Cerro Navia',
-        comuna_destino: firstRow.comuna_destino || 'CERRO NAVIA',
-        rut_transportista: firstRow.rut_transportista || '18338934-3',
-        tipo_traslado: firstRow.tipo_traslado || 'TRASLADO: Otros traslados No Venta',
-        tipo_despacho: firstRow.tipo_despacho || 'Sin Despacho',
-        referencias: firstRow.referencias || 'Devoluciónnull',
+        cliente_nombre: clienteNombre,
+        cliente_rut: clienteRut,
+        giro: giroCliente,
+        direccion_despacho: direccionDespacho,
+        comuna_despacho: comunaDespacho,
+        ciudad_despacho: comunaDespacho,
+        nombre_chofer: nombreChofer,
+        rut_chofer: rutChofer,
+        patente_vehiculo: patenteVehiculo,
+        direccion_destino: direccionDespacho,
+        comuna_destino: comunaDespacho,
+        rut_transportista: rutChofer,
+        tipo_traslado: firstRow.tipo_traslado || 'Venta',
+        tipo_despacho: 'Despacho Terrestre',
+        referencias: '',
         forma_pago: itemFormaPago,
         vendedor: itemVendedor,
         subtotal,
