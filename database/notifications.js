@@ -347,30 +347,12 @@ function generateDespachoPDF(despacho, items, clientInfo) {
         }
       }
 
-      // Sanitizar direcciones y vendedor para eliminar remanentes viejos de Lo Espejo
-      let rawDirDespacho = despacho.direccion_despacho || (clientInfo && clientInfo.direccion);
-      if (!rawDirDespacho || rawDirDespacho.toUpperCase().includes('ESPEJO') || rawDirDespacho.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
-        rawDirDespacho = 'Laguna Sur #8383 Pudahuel';
-      }
-      let rawComDespacho = despacho.comuna_despacho || (clientInfo && clientInfo.comuna);
-      if (!rawComDespacho || rawComDespacho.toUpperCase().includes('CERILLOS') || rawComDespacho.toUpperCase().includes('SAN FERNANDO')) {
-        rawComDespacho = 'PUDAHUEL';
-      }
-
-      let rawDirDestino = despacho.direccion_destino;
-      if (!rawDirDestino || rawDirDestino.toUpperCase().includes('ESPEJO') || rawDirDestino.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
-        rawDirDestino = 'Rene Oliva #1358 Cerro Navia';
-      }
-      let rawComDestino = despacho.comuna_destino;
-      if (!rawComDestino || rawComDestino.toUpperCase().includes('CERILLOS') || rawComDestino.toUpperCase().includes('SAN FERNANDO')) {
-        rawComDestino = 'CERRO NAVIA';
-      }
-
-      let vendorVal = despacho.vendedor || despacho.vendedor_nombre;
-      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) {
-        if (items && items[0] && items[0].vendedor) vendorVal = items[0].vendedor;
-      }
-      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Arantxa Perez';
+      // Obtener dirección, comuna y vendedor del objeto despacho
+      let rawDirDespacho = despacho.direccion_despacho || (clientInfo && clientInfo.direccion) || 'Dirección de Despacho';
+      let rawComDespacho = despacho.comuna_despacho || (clientInfo && clientInfo.comuna) || 'Santiago';
+      let rawDirDestino = despacho.direccion_destino || rawDirDespacho;
+      let rawComDestino = despacho.comuna_destino || rawComDespacho;
+      let vendorVal = despacho.vendedor || despacho.vendedor_nombre || (items && items[0] && items[0].vendedor) || 'Vendedor Central';
 
       const emisorY = 70;
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
@@ -393,20 +375,24 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Condiciones', 42, infoY + 50);
       doc.text('Vendedor', 42, infoY + 64);
 
+      const clientNameVal = (clientInfo && clientInfo.nombre) || despacho.cliente_nombre || 'Cliente General';
+      const clientDirVal = (clientInfo && clientInfo.direccion) || despacho.direccion_despacho || 'Dirección Despacho';
+      const clientComVal = (clientInfo && clientInfo.comuna) || despacho.comuna_despacho || 'Santiago';
+
       doc.font('Helvetica').fontSize(8);
-      doc.text(': COMERCIAL ELEODORO SPA', 100, infoY + 8, { width: 220, ellipsis: true });
-      doc.text(`: ${rawDirDespacho}`, 100, infoY + 22, { width: 220, ellipsis: true });
-      doc.text(`: ${rawComDespacho}`, 100, infoY + 36);
+      doc.text(`: ${clientNameVal}`, 100, infoY + 8, { width: 220, ellipsis: true });
+      doc.text(`: ${clientDirVal}`, 100, infoY + 22, { width: 220, ellipsis: true });
+      doc.text(`: ${clientComVal}`, 100, infoY + 36);
       doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);
       doc.font('Helvetica-Bold');
-      doc.text(`: ${vendorVal}`, 100, infoY + 64, { width: 220, ellipsis: true });
+      doc.text(`: ${despacho.vendedor || 'Vendedor Central'}`, 100, infoY + 64, { width: 220, ellipsis: true });
       doc.font('Helvetica');
 
       // Columna 2
       doc.font('Helvetica-Bold');
       doc.text('Ciudad :', 220, infoY + 36);
       doc.font('Helvetica');
-      doc.text(`${despacho.ciudad_despacho || rawComDespacho || 'SANTIAGO'}`, 260, infoY + 36);
+      doc.text(`${despacho.ciudad_despacho || clientComVal}`, 260, infoY + 36);
 
       doc.font('Helvetica-Bold');
       doc.text('Vencimiento :', 220, infoY + 50);
@@ -423,8 +409,8 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       const fechaStr = `Santiago, ${fechaEmision.getDate()} de ${fechaEmision.toLocaleString('es-CL', { month: 'long' })} de ${fechaEmision.getFullYear()}`;
 
       doc.font('Helvetica');
-      doc.text(`: ${clientInfo.giro || despacho.giro || '-'}`, 390, infoY + 8, { width: 175 });
-      doc.text(`: ${clientInfo.rut_o_nit || despacho.cliente_rut || '78.256.573-7'}`, 390, infoY + 22);
+      doc.text(`: ${(clientInfo && clientInfo.giro) || despacho.giro || 'Comercial'}`, 390, infoY + 8, { width: 175 });
+      doc.text(`: ${(clientInfo && clientInfo.rut_o_nit) || despacho.cliente_rut || 'N/A'}`, 390, infoY + 22);
       doc.text(`: ${fechaStr}`, 390, infoY + 36);
 
       // --- 4. RECUADRO 2: DATOS DEL TRANSPORTE Y CHOFER ---
@@ -438,13 +424,17 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Despacho', 42, transpY + 34);
       doc.text('Traslado', 42, transpY + 48);
 
+      const driverNameVal = despacho.nombre_chofer || 'Chofer no especificado';
+      const driverRutVal = despacho.rut_chofer || 'N/A';
+      const driverPatenteVal = despacho.patente_vehiculo || 'N/A';
+      const driverDestinoVal = despacho.direccion_destino || clientDirVal;
+      const driverComunaDestino = despacho.comuna_destino || clientComVal;
+
       doc.font('Helvetica').fontSize(8);
-      doc.text(`Fecha Emisión: ${new Date(despacho.fecha_emision).toLocaleDateString('es-CL')}`, 320, infoY + 20);
-      doc.text(`Tipo Traslado: ${despacho.tipo_traslado || 'Venta'}`, 320, infoY + 32);
-      doc.text(`Chofer: ${despacho.nombre_chofer || 'N/A'} (RUT: ${despacho.rut_chofer || 'N/A'})`, 320, infoY + 44, { width: 240 });
-      doc.text(`Patente Vehículo: ${despacho.patente_vehiculo || 'N/A'}`, 320, infoY + 62);
-      doc.text(`Vendedor: ${despacho.vendedor || 'Vendedor Central'}`, 320, infoY + 74);
-      doc.text(`Forma Pago: ${despacho.metodo_pago || 'Transferencia Electrónica'}`, 320, infoY + 86);
+      doc.text(`: ${driverNameVal}`, 110, transpY + 6, { width: 180, ellipsis: true });
+      doc.text(`: ${driverRutVal}`, 110, transpY + 20);
+      doc.text(`: ${despacho.tipo_despacho || 'Despacho Terrestre'}`, 110, transpY + 34);
+      doc.text(`: ${despacho.tipo_traslado || 'Venta'}`, 110, transpY + 48, { width: 180, ellipsis: true });
 
       doc.font('Helvetica-Bold').fontSize(8);
       doc.text('Patente', 300, transpY + 6);
@@ -453,10 +443,10 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('Rut Transportista', 300, transpY + 48);
 
       doc.font('Helvetica').fontSize(8);
-      doc.text(`: ${despacho.patente_vehiculo || 'CYPX-41'}`, 390, transpY + 6);
-      doc.text(`: ${rawDirDestino}`, 390, transpY + 20, { width: 175, ellipsis: true });
-      doc.text(`: ${rawComDestino}`, 390, transpY + 34);
-      doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
+      doc.text(`: ${driverPatenteVal}`, 390, transpY + 6);
+      doc.text(`: ${driverDestinoVal}`, 390, transpY + 20, { width: 175, ellipsis: true });
+      doc.text(`: ${driverComunaDestino}`, 390, transpY + 34);
+      doc.text(`: ${despacho.rut_transportista || driverRutVal}`, 390, transpY + 48);
 
       doc.fillColor('#000000').font('Helvetica');
       let itemY = tableY + 20;
