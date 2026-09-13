@@ -1571,3 +1571,57 @@ button {
     width: 100%;
   }
 }
+
+/* -------------------------------------------------------------
+   13. ESTILOS DASHBOARD GENERADOR DE GUÍAS EXCEL (RPA)
+   ------------------------------------------------------------- */
+.btn-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.btn-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-tab.active {
+  color: #ffffff;
+  background: var(--color-primary);
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.3);
+}
+
+.excel-dropzone:hover {
+  border-color: var(--color-primary) !important;
+  background: rgba(229, 9, 20, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+.radio-mode-card {
+  transition: all 0.2s ease;
+}
+
+.radio-mode-card:hover {
+  border-color: var(--color-primary) !important;
+  background: rgba(229, 9, 20, 0.05) !important;
+}
+
+@keyframes spin-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.rotate {
+  animation: spin-rotate 1s linear infinite;
+}
+

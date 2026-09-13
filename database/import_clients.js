@@ -5,14 +5,16 @@ const XLSX = require('xlsx');
 const path = require('path');
 const db = require('./connection');
 
-const filePath = 'C:\\Users\\pc\\Downloads\\plantilla_clientes_proveedores ELEODORO.xlsx';
+const fs = require('fs');
+const userDownloads = path.join(process.env.USERPROFILE || 'C:\\Users\\ext_jmena', 'Downloads', 'plantilla_clientes_proveedores ELEODORO.xlsx');
+const filePath = fs.existsSync(userDownloads) ? userDownloads : 'C:\\Users\\pc\\Downloads\\plantilla_clientes_proveedores ELEODORO.xlsx';
 
 async function runImport() {
   console.log('Iniciando importación de clientes desde Excel...');
 
   try {
     const workbook = XLSX.readFile(filePath);
-    const sheetNames = ['clientes 1', 'clientes 2'];
+    const sheetNames = workbook.SheetNames;
 
     const clientRows = [];
     const seenRutsInExcel = new Set();

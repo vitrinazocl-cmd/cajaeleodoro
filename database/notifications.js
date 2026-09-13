@@ -12,11 +12,19 @@ require('dotenv').config();
 const BOLETAS_DIR = path.join(__dirname, '..', 'exports', 'boletas');
 const COMPRAS_DIR = path.join(__dirname, '..', 'exports', 'compras');
 const DESPACHOS_DIR = path.join(__dirname, '..', 'exports', 'despachos');
+const DESPACHOS_EFECTIVO_DIR = path.join(DESPACHOS_DIR, 'efectivo');
+const DESPACHOS_TRANSFERENCIA_DIR = path.join(DESPACHOS_DIR, 'transferencia');
+const DESPACHOS_TARJETA_DIR = path.join(DESPACHOS_DIR, 'tarjeta');
+const DESPACHOS_COMBINADO_DIR = path.join(DESPACHOS_DIR, 'combinado');
 
 // Asegurar directorios
 if (!fs.existsSync(BOLETAS_DIR)) fs.mkdirSync(BOLETAS_DIR, { recursive: true });
 if (!fs.existsSync(COMPRAS_DIR)) fs.mkdirSync(COMPRAS_DIR, { recursive: true });
 if (!fs.existsSync(DESPACHOS_DIR)) fs.mkdirSync(DESPACHOS_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_EFECTIVO_DIR)) fs.mkdirSync(DESPACHOS_EFECTIVO_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_TRANSFERENCIA_DIR)) fs.mkdirSync(DESPACHOS_TRANSFERENCIA_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_TARJETA_DIR)) fs.mkdirSync(DESPACHOS_TARJETA_DIR, { recursive: true });
+if (!fs.existsSync(DESPACHOS_COMBINADO_DIR)) fs.mkdirSync(DESPACHOS_COMBINADO_DIR, { recursive: true });
 
 // Formateador de moneda CLP
 const fmtCLP = (val) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
@@ -277,52 +285,159 @@ async function sendWhatsAppNotification(phoneNumber, message) {
 function generateDespachoPDF(despacho, items, clientInfo) {
   return new Promise((resolve, reject) => {
     try {
-      const pdfPath = path.join(DESPACHOS_DIR, `${despacho.folio}.pdf`);
-      const doc = new PDFDocument({ size: 'LETTER', margins: { top: 40, bottom: 40, left: 40, right: 40 } });
-      const writeStream = fs.createWriteStream(pdfPath);
+      // Determinar subcarpeta según método de pago (efectivo, transferencia, tarjeta, combinado)
+      let subDir = DESPACHOS_TRANSFERENCIA_DIR;
+      let rawMethod = String(despacho.forma_pago || despacho.formaPago || 'transferencia').toLowerCase().trim();
+
+      if (rawMethod.includes('combinado') || rawMethod.includes('mixto')) {
+        subDir = DESPACHOS_COMBINADO_DIR;
+        rawMethod = 'Pago Combinado';
+      } else if (rawMethod.includes('efectivo') || rawMethod.includes('cash')) {
+        subDir = DESPACHOS_EFECTIVO_DIR;
+        rawMethod = 'Efectivo';
+      } else if (rawMethod.includes('tarjeta') || rawMethod.includes('card') || rawMethod.includes('debito') || rawMethod.includes('débito') || rawMethod.includes('credito') || rawMethod.includes('crédito')) {
+        subDir = DESPACHOS_TARJETA_DIR;
+        rawMethod = 'Tarjeta';
+      } else {
+        subDir = DESPACHOS_TRANSFERENCIA_DIR;
+        rawMethod = 'Transferencia';
+      }
+
+      despacho.forma_pago = rawMethod;
+
+      const targetPdfPath = path.join(subDir, `${despacho.folio}.pdf`);
+      const fallbackPdfPath = path.join(DESPACHOS_DIR, `${despacho.folio}.pdf`);
+
+      const doc = new PDFDocument({ size: 'LETTER', margins: { top: 35, bottom: 35, left: 35, right: 35 } });
+      const writeStream = fs.createWriteStream(targetPdfPath);
       doc.pipe(writeStream);
 
-      // --- 1. DIBUJAR RECUADRO ROJO SII (S.I.I. CHILE FORMAT) ---
-      const boxX = 380;
-      const boxY = 40;
-      const boxW = 190;
-      const boxH = 90;
+      const logoPath = path.join(__dirname, '..', 'public', 'logo.jpg');
+
+      // --- 1. RECUADRO ROJO SII (S.I.I. CHILE FORMAT) ---
+      const boxX = 370;
+      const boxY = 35;
+      const boxW = 200;
+      const boxH = 95;
       
       doc.rect(boxX, boxY, boxW, boxH).lineWidth(2).stroke('#E50914');
       
       doc.fillColor('#E50914').font('Helvetica-Bold').fontSize(12);
-      doc.text('R.U.T.: 76.999.888-K', boxX, boxY + 12, { width: boxW, align: 'center' });
-      doc.text('GUÍA DE DESPACHO', boxX, boxY + 28, { width: boxW, align: 'center' });
-      doc.text('ELECTRÓNICA', boxX, boxY + 42, { width: boxW, align: 'center' });
-      doc.fontSize(14).text(`Nº ${despacho.folio}`, boxX, boxY + 58, { width: boxW, align: 'center' });
-      doc.fontSize(9).text('S.I.I. - SANTIAGO', boxX, boxY + 74, { width: boxW, align: 'center' });
+      doc.text('R.U.T.: 78.256.573-7', boxX, boxY + 12, { width: boxW, align: 'center' });
+      doc.text('GUIA DE DESPACHO', boxX, boxY + 28, { width: boxW, align: 'center' });
+      doc.text('ELECTRONICA', boxX, boxY + 42, { width: boxW, align: 'center' });
+      doc.fontSize(14).text(`Nº ${despacho.folio || '000001'}`, boxX, boxY + 58, { width: boxW, align: 'center' });
+      doc.fontSize(8.5).text('S.I.I. - SANTIAGO PONIENTE', boxX, boxY + 76, { width: boxW, align: 'center' });
 
       // Resetear color
-      doc.fillColor('#000000').font('Helvetica').fontSize(9);
+      doc.fillColor('#000000');
 
-      // --- 2. DATOS DEL EMISOR (BODEGA CENTRAL / DISTRIBUIDORA) ---
-      doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a1a1a').text('ELEODORO EL GRANDE DISTRIBUIDORA', 40, 40);
-      doc.fontSize(8).font('Helvetica').fillColor('#555555').text('GIRO: Distribuidora de Bebidas, Licores y Consumo Masivo');
-      doc.text('Dirección: Av. Principal 4500, Santiago, Chile');
-      doc.text('Teléfono: +56 9 8765 4321 | Email: contacto@eleodoroelgrande.cl');
-      doc.moveDown(2);
+      // --- 2. DATOS DEL EMISOR CON LOGO ---
+      const headerLogoPath = fs.existsSync(path.join(__dirname, '..', 'public', 'logo.png'))
+        ? path.join(__dirname, '..', 'public', 'logo.png')
+        : (fs.existsSync(path.join(__dirname, '..', 'public', 'logo.jpg'))
+            ? path.join(__dirname, '..', 'public', 'logo.jpg')
+            : path.join(__dirname, 'logo.jpg'));
 
-      // --- 3. RECUADROS DE INFORMACIÓN (CLIENTE Y TRANSPORTE) ---
-      const infoY = 150;
+      if (fs.existsSync(headerLogoPath)) {
+        try {
+          doc.image(headerLogoPath, 35, 30, { fit: [120, 50] });
+        } catch (e) {
+          console.error('Error cargando logo en PDF:', e.message);
+        }
+      }
+
+      // Sanitizar direcciones y vendedor para eliminar remanentes viejos de Lo Espejo
+      let rawDirDespacho = despacho.direccion_despacho || (clientInfo && clientInfo.direccion);
+      if (!rawDirDespacho || rawDirDespacho.toUpperCase().includes('ESPEJO') || rawDirDespacho.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
+        rawDirDespacho = 'Laguna Sur #8383 Pudahuel';
+      }
+      let rawComDespacho = despacho.comuna_despacho || (clientInfo && clientInfo.comuna);
+      if (!rawComDespacho || rawComDespacho.toUpperCase().includes('CERILLOS') || rawComDespacho.toUpperCase().includes('SAN FERNANDO')) {
+        rawComDespacho = 'PUDAHUEL';
+      }
+
+      let rawDirDestino = despacho.direccion_destino;
+      if (!rawDirDestino || rawDirDestino.toUpperCase().includes('ESPEJO') || rawDirDestino.toUpperCase().includes('RODRÍGUEZ') || rawDirDespacho.toUpperCase().includes('RODRIGUEZ')) {
+        rawDirDestino = 'Rene Oliva #1358 Cerro Navia';
+      }
+      let rawComDestino = despacho.comuna_destino;
+      if (!rawComDestino || rawComDestino.toUpperCase().includes('CERILLOS') || rawComDestino.toUpperCase().includes('SAN FERNANDO')) {
+        rawComDestino = 'CERRO NAVIA';
+      }
+
+      let vendorVal = despacho.vendedor || despacho.vendedor_nombre;
+      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) {
+        if (items && items[0] && items[0].vendedor) vendorVal = items[0].vendedor;
+      }
+      if (!vendorVal || vendorVal === '-' || vendorVal.toUpperCase().includes('ELEODORO')) vendorVal = 'Arantxa Perez';
+
+      const emisorY = 70;
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text('COMERCIAL ELEODORO SPA', 35, emisorY);
+      doc.fontSize(7).font('Helvetica').fillColor('#444444').text('COMPRA VENTA Y DIST. AL POR MENOR Y MAYOR DE BEBIDAS NO ALCOHÓLICAS', 35, emisorY + 13);
+      doc.fontSize(6.5).fillColor('#333333').text('CASA MATRIZ: LAGUNA SUR #8383 PUDAHUEL', 35, emisorY + 23);
+      doc.text('SUCURSAL: RENE OLIVA #1358 CERRO NAVIA, SANTIAGO', 35, emisorY + 32);
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#111111').text('FONOS: +56 9 4969 2316  /  +56 9 5626 4496', 35, emisorY + 43);
+
+      // --- 3. RECUADRO 1: DATOS DEL CLIENTE Y VENDEDOR ---
+      const infoY = 138;
+      const infoH = 82;
+      doc.rect(35, infoY, 535, infoH).lineWidth(0.7).stroke('#333333');
+
+      doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8);
       
-      // Recuadro Cliente (Izquierda)
-      doc.rect(40, infoY, 260, 110).lineWidth(0.5).stroke('#cccccc');
-      doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8.5).text('DATOS DEL RECEPTOR (CLIENTE)', 50, infoY + 8);
-      doc.font('Helvetica').fontSize(8);
-      doc.text(`Señor(es): ${clientInfo.nombre || 'Cliente General'}`, 50, infoY + 22, { width: 240 });
-      doc.text(`R.U.T.: ${clientInfo.rut_o_nit || 'N/A'}`, 50, infoY + 45);
-      doc.text(`Giro: ${clientInfo.giro || 'Comercial / Distribución'}`, 50, infoY + 57, { width: 240 });
-      doc.text(`Dirección: ${despacho.direccion_despacho}`, 50, infoY + 77, { width: 240 });
-      doc.text(`Comuna: ${despacho.comuna_despacho || 'Santiago'}`, 50, infoY + 95);
+      // Columna 1
+      doc.text('Señor(es)', 42, infoY + 8);
+      doc.text('Dirección', 42, infoY + 22);
+      doc.text('Comuna', 42, infoY + 36);
+      doc.text('Condiciones', 42, infoY + 50);
+      doc.text('Vendedor', 42, infoY + 64);
 
-      // Recuadro Transporte/Despacho (Derecha)
-      doc.rect(310, infoY, 260, 110).lineWidth(0.5).stroke('#cccccc');
-      doc.font('Helvetica-Bold').fontSize(8.5).text('DATOS DEL TRASLADO Y DESPACHO', 320, infoY + 8);
+      doc.font('Helvetica').fontSize(8);
+      doc.text(': COMERCIAL ELEODORO SPA', 100, infoY + 8, { width: 220, ellipsis: true });
+      doc.text(`: ${rawDirDespacho}`, 100, infoY + 22, { width: 220, ellipsis: true });
+      doc.text(`: ${rawComDespacho}`, 100, infoY + 36);
+      doc.text(`: ${despacho.condiciones || '-'}`, 100, infoY + 50);
+      doc.font('Helvetica-Bold');
+      doc.text(`: ${vendorVal}`, 100, infoY + 64, { width: 220, ellipsis: true });
+      doc.font('Helvetica');
+
+      // Columna 2
+      doc.font('Helvetica-Bold');
+      doc.text('Ciudad :', 220, infoY + 36);
+      doc.font('Helvetica');
+      doc.text(`${despacho.ciudad_despacho || rawComDespacho || 'SANTIAGO'}`, 260, infoY + 36);
+
+      doc.font('Helvetica-Bold');
+      doc.text('Vencimiento :', 220, infoY + 50);
+      doc.font('Helvetica');
+      doc.text(`${despacho.vencimiento || '-'}`, 285, infoY + 50);
+
+      // Columna Derecha (SII datos cliente)
+      doc.font('Helvetica-Bold');
+      doc.text('Giro', 350, infoY + 8);
+      doc.text('R.U.T.', 350, infoY + 22);
+      doc.text('Fecha', 350, infoY + 36);
+
+      const fechaEmision = despacho.fecha_emision ? new Date(despacho.fecha_emision) : new Date();
+      const fechaStr = `Santiago, ${fechaEmision.getDate()} de ${fechaEmision.toLocaleString('es-CL', { month: 'long' })} de ${fechaEmision.getFullYear()}`;
+
+      doc.font('Helvetica');
+      doc.text(`: ${clientInfo.giro || despacho.giro || '-'}`, 390, infoY + 8, { width: 175 });
+      doc.text(`: ${clientInfo.rut_o_nit || despacho.cliente_rut || '78.256.573-7'}`, 390, infoY + 22);
+      doc.text(`: ${fechaStr}`, 390, infoY + 36);
+
+      // --- 4. RECUADRO 2: DATOS DEL TRANSPORTE Y CHOFER ---
+      const transpY = infoY + infoH + 6;
+      const transpH = 65;
+      doc.rect(35, transpY, 535, transpH).lineWidth(0.7).stroke('#333333');
+
+      doc.font('Helvetica-Bold').fontSize(8);
+      doc.text('Nombre Chofer', 42, transpY + 6);
+      doc.text('Rut Chofer', 42, transpY + 20);
+      doc.text('Despacho', 42, transpY + 34);
+      doc.text('Traslado', 42, transpY + 48);
+
       doc.font('Helvetica').fontSize(8);
       doc.text(`Fecha Emisión: ${new Date(despacho.fecha_emision).toLocaleDateString('es-CL')}`, 320, infoY + 20);
       doc.text(`Tipo Traslado: ${despacho.tipo_traslado || 'Venta'}`, 320, infoY + 32);
@@ -331,25 +446,33 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text(`Vendedor: ${despacho.vendedor || 'Vendedor Central'}`, 320, infoY + 74);
       doc.text(`Forma Pago: ${despacho.metodo_pago || 'Transferencia Electrónica'}`, 320, infoY + 86);
 
-      doc.moveDown(3);
+      doc.font('Helvetica-Bold').fontSize(8);
+      doc.text('Patente', 300, transpY + 6);
+      doc.text('Dirección destino', 300, transpY + 20);
+      doc.text('Comuna destino', 300, transpY + 34);
+      doc.text('Rut Transportista', 300, transpY + 48);
 
-      // --- 4. TABLA DE PRODUCTOS ---
-      const tableY = 285;
-      doc.rect(40, tableY, 530, 20).fill('#1a1a1a');
-      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
-      doc.text('CÓDIGO', 45, tableY + 6);
-      doc.text('DESCRIPCIÓN DEL PRODUCTO', 120, tableY + 6);
-      doc.text('CANTIDAD', 380, tableY + 6, { width: 50, align: 'center' });
-      doc.text('UNITARIO', 440, tableY + 6, { width: 50, align: 'right' });
-      doc.text('TOTAL', 500, tableY + 6, { width: 60, align: 'right' });
+      doc.font('Helvetica').fontSize(8);
+      doc.text(`: ${despacho.patente_vehiculo || 'CYPX-41'}`, 390, transpY + 6);
+      doc.text(`: ${rawDirDestino}`, 390, transpY + 20, { width: 175, ellipsis: true });
+      doc.text(`: ${rawComDestino}`, 390, transpY + 34);
+      doc.text(`: ${despacho.rut_transportista || despacho.rut_chofer || '18338934-3'}`, 390, transpY + 48);
 
       doc.fillColor('#000000').font('Helvetica');
       let itemY = tableY + 20;
       let totalCantidadBultos = 0;
 
-      items.forEach((item, index) => {
+      doc.fillColor('#000000').font('Helvetica').fontSize(7.5);
+      let itemY = tableY + tableH;
+
+      // Limitar a máximo 16 SKUs para asegurar formato estricto de 1 sola página
+      const pageItems = items.slice(0, 16);
+
+      pageItems.forEach((item, index) => {
+        const lineNo = index + 1;
+        const rowH = 14;
         if (index % 2 === 1) {
-          doc.rect(40, itemY, 530, 18).fill('#f9f9f9');
+          doc.rect(35, itemY, 535, rowH).fill('#f7f7f7');
           doc.fillColor('#000000');
         }
         
@@ -380,44 +503,90 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.text('NETO:', 420, totalsY, { width: 70, align: 'left' });
       doc.text(fmtCLP(despacho.subtotal), 500, totalsY, { width: 70, align: 'right' });
 
-      doc.text('IVA (19%):', 420, totalsY + 15, { width: 70, align: 'left' });
-      doc.text(fmtCLP(despacho.iva), 500, totalsY + 15, { width: 70, align: 'right' });
+      doc.font('Helvetica-Bold').fontSize(8);
+      doc.text('SON: PESOS.--', 35, footerY);
 
-      doc.fontSize(10).text('TOTAL:', 420, totalsY + 30, { width: 70, align: 'left' });
-      doc.text(fmtCLP(despacho.total), 500, totalsY + 30, { width: 70, align: 'right' });
+      doc.font('Helvetica').fontSize(7.5);
+      doc.text('Cancelado por : ____________________ de: ___________ de: ___________', 260, footerY);
 
-      // --- 6. TIMBRE ELECTRÓNICO SII (MOCKED) ---
-      const timbreY = totalsY + 50;
-      doc.rect(40, timbreY, 280, 75).lineWidth(1).stroke('#E50914');
+      doc.rect(35, footerY + 14, 535, 26).lineWidth(0.5).stroke('#aaaaaa');
+      doc.font('Helvetica-Bold').fontSize(7);
+      doc.text('Referencias:', 42, footerY + 17);
+      doc.font('Helvetica').fontSize(7);
+      doc.text(despacho.referencias || 'Devolución / Venta', 42, footerY + 28);
+
+      // Cuadro Timbre Electrónico SII (Izquierda)
+      const timbreY = footerY + 46;
+      doc.rect(35, timbreY, 250, 85).lineWidth(0.8).stroke('#000000');
       
       doc.save();
-      doc.translate(50, timbreY + 10);
-      doc.lineWidth(0.5).strokeColor('#E50914');
-      for (let i = 0; i < 260; i += 4) {
-        let height = 30;
-        if (i % 8 === 0) doc.moveTo(i, 0).lineTo(i, height).stroke();
-        if (i % 12 === 0) doc.moveTo(i + 1, 0).lineTo(i + 1, height).stroke();
+      doc.translate(45, timbreY + 8);
+      doc.lineWidth(0.6).strokeColor('#000000');
+      for (let i = 0; i < 230; i += 3) {
+        let height = 40;
+        if (i % 6 === 0) doc.moveTo(i, 0).lineTo(i, height).stroke();
+        if (i % 9 === 0) doc.moveTo(i + 1, 0).lineTo(i + 1, height).stroke();
       }
       doc.restore();
 
-      doc.fillColor('#E50914').font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Timbre Electrónico S.I.I.', 50, timbreY + 45, { width: 260, align: 'center' });
+      doc.fillColor('#000000').font('Helvetica-Bold').fontSize(7.5);
+      doc.text('Timbre Electronico S.I.I.', 35, timbreY + 56, { width: 250, align: 'center' });
       doc.font('Helvetica').fontSize(6.5);
-      doc.text('Resolución Nº 80 de 2026 - Verifique validez en www.sii.cl', 50, timbreY + 55, { width: 260, align: 'center' });
+      doc.text('Resolución 80 del 22/08/2014   Verifique Documento: http://www.sii.cl', 35, timbreY + 68, { width: 250, align: 'center' });
 
-      // --- 7. ACUSE DE RECIBO ---
-      const recY = timbreY + 90;
-      doc.rect(40, recY, 530, 50).lineWidth(0.5).stroke('#999999');
-      doc.fillColor('#555555').font('Helvetica-Bold').fontSize(7).text('ACUSE DE RECIBO Y RECEPCIÓN', 45, recY + 5);
-      doc.font('Helvetica').fontSize(6.5);
-      doc.text('Nombre Recibe: _______________________________   R.U.T.: ___________________   Firma: ___________________', 45, recY + 18);
-      doc.text('El acuse de recibo que se declara en este acto, acredita que las mercaderías han sido entregadas al receptor conforme y a su entera satisfacción.', 45, recY + 33);
+      // Cuadro Forma de Pago y Montos Totales (Derecha)
+      doc.rect(295, timbreY, 130, 85).lineWidth(0.5).stroke('#aaaaaa');
+      doc.font('Helvetica-Bold').fontSize(8);
+      doc.text('Forma de Pago:', 300, timbreY + 8);
+      doc.font('Helvetica').fontSize(7.5);
+      doc.text(despacho.forma_pago || 'Crédito / Transferencia', 300, timbreY + 22);
+
+      doc.rect(430, timbreY, 140, 85).lineWidth(0.5).stroke('#aaaaaa');
+      doc.font('Helvetica-Bold').fontSize(8.5);
+      
+      const subtotalVal = despacho.subtotal || items.reduce((acc, i) => acc + (i.subtotal || 0), 0);
+      const ivaVal = despacho.iva || Math.round(subtotalVal * 0.19);
+      const totalVal = despacho.total || (subtotalVal + ivaVal);
+
+      doc.text('Montos Totales', 435, timbreY + 6, { width: 130, align: 'center' });
+      doc.font('Helvetica').fontSize(8);
+      doc.text(`Neto:`, 438, timbreY + 24);
+      doc.text(`$ ${subtotalVal.toLocaleString('es-CL')}`, 480, timbreY + 24, { width: 85, align: 'right' });
+
+      doc.text(`IVA (19%):`, 438, timbreY + 40);
+      doc.text(`$ ${ivaVal.toLocaleString('es-CL')}`, 480, timbreY + 40, { width: 85, align: 'right' });
+
+      doc.font('Helvetica-Bold').fontSize(9);
+      doc.text(`Total:`, 438, timbreY + 60);
+      doc.text(`$ ${totalVal.toLocaleString('es-CL')}`, 480, timbreY + 60, { width: 85, align: 'right' });
+
+      // Logo bajado 0.5 cm (X = 252, Y = 674) dentro de 1 sola hoja
+      const watermarkPath = fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.png'))
+        ? path.join(__dirname, '..', 'public', 'sello_agua.png')
+        : (fs.existsSync(path.join(__dirname, '..', 'public', 'sello_agua.jpg'))
+            ? path.join(__dirname, '..', 'public', 'sello_agua.jpg')
+            : headerLogoPath);
+
+      if (fs.existsSync(watermarkPath)) {
+        try {
+          doc.image(watermarkPath, 252, 674, { fit: [230, 63] });
+        } catch (e) {
+          console.error('Error imprimiendo logo inferior:', e.message);
+        }
+      }
+
+      // Sitio web oficial bajado 0.5 cm (Y = 741) dentro de 1 sola hoja
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#E50914');
+      doc.text('www.eleodoroelgrande.cl', 35, 741, { width: 542, align: 'center' });
 
       doc.end();
 
       writeStream.on('finish', () => {
-        console.log(`[PDF] Guía de Despacho PDF guardada en: exports/despachos/${despacho.folio}.pdf`);
-        resolve(pdfPath);
+        try {
+          fs.copyFileSync(targetPdfPath, fallbackPdfPath);
+        } catch (e) {}
+        console.log(`[PDF] Guía de Despacho PDF SII guardada en: ${targetPdfPath}`);
+        resolve(targetPdfPath);
       });
     } catch (err) {
       console.error('Error al generar PDF de Despacho:', err);

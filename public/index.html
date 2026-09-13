@@ -17,6 +17,8 @@
   
   <!-- Chart.js para Reportería Ejecutiva y Business Intelligence -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- XLSX SheetJS para importación y exportación de plantillas Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <!-- SheetJS para Lectura y Procesamiento de Excel (.xlsx / .xls) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -567,7 +569,7 @@
         </section>
 
         <!-- ==========================================
-             VISTA: GUÍAS DE DESPACHO
+             VISTA: GUÍAS DE DESPACHO (DASHBOARD AUTOMATIZADO)
              ========================================== -->
         <section id="view-erp-despachos" class="app-view">
           <div class="erp-container" style="display: flex; flex-direction: column; gap: 20px;">
@@ -820,10 +822,14 @@
              ========================================== -->
         <section id="view-erp-clientes" class="app-view">
           <div class="erp-container">
-            <div class="table-header-actions">
-              <div class="search-box">
+            <div class="table-header-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div class="search-box" style="flex: 1; min-width: 280px; position: relative;">
                 <span class="material-icons-round">search</span>
-                <input type="text" id="erp-clients-search" placeholder="Buscar clientes...">
+                <input type="text" id="erp-clients-search" placeholder="🔍 Buscador Inteligente: Nombre, RUT, Comuna, Teléfono..." style="width: 100%; padding-right: 32px;">
+                <span id="erp-clients-search-clear" class="material-icons-round" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); display: none; font-size: 18px;" title="Limpiar búsqueda">close</span>
+              </div>
+              <div id="erp-clients-counter" style="background: rgba(229, 9, 20, 0.12); color: var(--color-primary); border: 1px solid rgba(229, 9, 20, 0.3); padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                <span class="material-icons-round" style="font-size: 16px;">people</span> <span id="erp-clients-count-text">0 Clientes</span>
               </div>
               <button class="btn-primary" id="btn-erp-new-client">
                 <span class="material-icons-round">person_add</span> Registrar Cliente
@@ -1440,9 +1446,15 @@
           <!-- Items Detail -->
           <h4 style="margin: 15px 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-weight: 600;">Detalle de Mercaderías</h4>
           <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px;">
-            <div class="form-group" style="flex: 2;">
-              <label for="des-producto-select">Producto</label>
-              <select id="des-producto-select" class="form-control" style="width:100%; padding:8px;"></select>
+            <div class="form-group" style="flex: 2; position: relative;">
+              <label for="des-producto-search">Buscar Producto</label>
+              <div style="position: relative;">
+                <input type="text" id="des-producto-search" class="form-control" placeholder="🔍 Buscador Inteligente: Nombre, SKU, Categoria..." autocomplete="off" style="width:100%; padding-right: 28px;">
+                <span id="des-producto-clear" class="material-icons-round" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); display: none; font-size: 18px;">close</span>
+              </div>
+              <input type="hidden" id="des-producto-id" value="">
+              <select id="des-producto-select" style="display:none;"></select>
+              <div id="des-producto-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1E1E22; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; max-height: 240px; overflow-y: auto; z-index: 1100; box-shadow: 0 10px 25px rgba(0,0,0,0.6); margin-top: 4px;"></div>
             </div>
             <div class="form-group" style="width: 100px;">
               <label for="des-cantidad">Cantidad</label>

@@ -2,10 +2,12 @@
 // Controlador para el nuevo módulo de Guías de Despacho (SII)
 
 let DespachoCart = [];
+let ParsedExcelRows = [];
 
 function initDespachosModule() {
   console.log('Inicializando módulo de Guías de Despacho...');
   loadDespachos();
+  setupExcelDropzone();
 
   // Búsqueda en historial
   const searchInput = document.getElementById('erp-despachos-search');
@@ -13,6 +15,33 @@ function initDespachosModule() {
     searchInput.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       filterDespachos(q);
+    });
+  }
+
+  // Búsqueda en Histórico Permanente
+  const searchHistoricoInput = document.getElementById('erp-historico-search');
+  if (searchHistoricoInput) {
+    searchHistoricoInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      filterHistoricoDespachos(q);
+    });
+  }
+
+  // Filtro por forma de pago historial
+  const filterPago = document.getElementById('historial-filtro-pago');
+  if (filterPago) {
+    filterPago.addEventListener('change', () => {
+      const q = document.getElementById('erp-despachos-search')?.value.toLowerCase().trim() || '';
+      filterDespachos(q);
+    });
+  }
+
+  // Filtro por forma de pago histórico permanente
+  const filterPagoHistorico = document.getElementById('historico-filtro-pago');
+  if (filterPagoHistorico) {
+    filterPagoHistorico.addEventListener('change', () => {
+      const q = document.getElementById('erp-historico-search')?.value.toLowerCase().trim() || '';
+      filterHistoricoDespachos(q);
     });
   }
 
@@ -48,7 +77,7 @@ function initDespachosModule() {
 async function loadDespachos() {
   const tbody = document.getElementById('erp-despachos-table-body');
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Cargando guías de despacho...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Cargando guías de despacho...</td></tr>`;
 
   try {
     const data = await apiFetch('/api/despachos');
@@ -67,20 +96,32 @@ function renderDespachosTable(despachos) {
   if (!tbody) return;
 
   if (despachos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No hay guías de despacho emitidas.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No hay guías de despacho emitidas.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = despachos.map(d => {
     const totalCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(d.total);
     const dateStr = new Date(d.fecha_emision).toLocaleString('es-CL');
+    
+    let pagoBadge = `<span class="badge" style="background: rgba(0, 123, 255, 0.15); color: #38ef7d; border: 1px solid rgba(0, 123, 255, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🏦 Transferencia</span>`;
+    const m = String(d.forma_pago || 'transferencia').toLowerCase();
+    if (m.includes('combinado') || m.includes('mixto')) {
+      pagoBadge = `<span class="badge" style="background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">🔀 Pago Combinado</span>`;
+    } else if (m.includes('efectivo') || m.includes('cash')) {
+      pagoBadge = `<span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💵 Efectivo</span>`;
+    } else if (m.includes('tarjeta') || m.includes('card') || m.includes('debito') || m.includes('credito')) {
+      pagoBadge = `<span class="badge" style="background: rgba(111, 66, 193, 0.15); color: #d63384; border: 1px solid rgba(111, 66, 193, 0.4); padding: 4px 8px; border-radius: 6px; font-weight:600;">💳 Tarjeta</span>`;
+    }
+
     return `
       <tr>
         <td><strong>${d.folio}</strong></td>
         <td>${d.cliente_nombre || 'Cliente General'}</td>
         <td>${d.cliente_rut || 'N/A'}</td>
         <td>${dateStr}</td>
-        <td><span class="badge" style="background-color: var(--color-bg); padding:4px 8px; border-radius:4px;">${d.tipo_traslado}</span></td>
+        <td>${pagoBadge}</td>
+        <td><span class="badge" style="background-color: rgba(255,255,255,0.08); padding:4px 8px; border-radius:4px;">${d.tipo_traslado || 'Venta'}</span></td>
         <td><strong>${totalCLP}</strong></td>
         <td class="actions-cell">
           <button class="btn-icon-secondary" title="Descargar PDF" onclick="downloadDespachoPDF(${d.id}, '${d.folio}')">
@@ -95,11 +136,25 @@ function renderDespachosTable(despachos) {
 // Filtrar guías localmente
 function filterDespachos(q) {
   if (!AppState.despachos) return;
-  const filtered = AppState.despachos.filter(d => 
-    d.folio.toLowerCase().includes(q) || 
-    (d.cliente_nombre && d.cliente_nombre.toLowerCase().includes(q)) ||
-    (d.cliente_rut && d.cliente_rut.toLowerCase().includes(q))
-  );
+  const pagoFiltro = document.getElementById('historial-filtro-pago')?.value || 'TODAS';
+
+  const filtered = AppState.despachos.filter(d => {
+    const matchQuery = d.folio.toLowerCase().includes(q) || 
+      (d.cliente_nombre && d.cliente_nombre.toLowerCase().includes(q)) ||
+      (d.cliente_rut && d.cliente_rut.toLowerCase().includes(q));
+
+    let matchPago = true;
+    if (pagoFiltro !== 'TODAS') {
+      const rawP = String(d.forma_pago || 'transferencia').toLowerCase();
+      if (pagoFiltro === 'Pago Combinado') matchPago = rawP.includes('combinado') || rawP.includes('mixto');
+      else if (pagoFiltro === 'Efectivo') matchPago = rawP.includes('efectivo');
+      else if (pagoFiltro === 'Tarjeta') matchPago = rawP.includes('tarjeta') || rawP.includes('debito') || rawP.includes('credito');
+      else if (pagoFiltro === 'Transferencia') matchPago = rawP.includes('transferencia');
+    }
+
+    return matchQuery && matchPago;
+  });
+
   renderDespachosTable(filtered);
 }
 
@@ -144,21 +199,32 @@ async function openNewDespachoModal() {
     });
   }
 
-  if (productSelect) {
-    productSelect.innerHTML = '<option value="">-- Seleccione Producto --</option>';
-    if (!AppState.products || AppState.products.length === 0) {
-      try {
-        const data = await apiFetch('/api/products');
-        if (data.success) AppState.products = data.products;
-      } catch (err) {
-        console.error(err);
-      }
+  if (!AppState.products || AppState.products.length === 0) {
+    try {
+      const data = await apiFetch('/api/products');
+      if (data.success) AppState.products = data.products;
+    } catch (err) {
+      console.error(err);
     }
+  }
 
+  if (productSelect && AppState.products) {
+    productSelect.innerHTML = '<option value="">-- Seleccione Producto --</option>';
     AppState.products.forEach(p => {
       productSelect.innerHTML += `<option value="${p.id}">${p.nombre} (Stock: ${p.stock_actual})</option>`;
     });
   }
+
+  // Resetear buscador de productos inteligente
+  const desSearch = document.getElementById('des-producto-search');
+  const desId = document.getElementById('des-producto-id');
+  const desClear = document.getElementById('des-producto-clear');
+  const desDropdown = document.getElementById('des-producto-dropdown');
+
+  if (desSearch) desSearch.value = '';
+  if (desId) desId.value = '';
+  if (desClear) desClear.style.display = 'none';
+  if (desDropdown) desDropdown.style.display = 'none';
 
   showModal('modal-despacho');
 }
@@ -171,10 +237,158 @@ function handleDespachoClientChange(e) {
   const client = AppState.customers.find(c => c.id === clientId);
   if (client) {
     document.getElementById('des-direccion').value = client.direccion || '';
-    // Intentar deducir la comuna de la dirección si no está vacía o dejar en blanco para entrada manual
     document.getElementById('des-comuna').value = client.direccion ? (client.direccion.split(',').pop().trim()) : '';
   }
 }
+
+// -------------------------------------------------------------
+// BUSCADOR INTELIGENTE DE PRODUCTOS PARA GUÍA DE DESPACHO
+// -------------------------------------------------------------
+let selectedDropdownIndex = -1;
+
+function searchDespachoProducts(query) {
+  if (!AppState.products) return [];
+  if (!query || !query.trim()) return AppState.products.slice(0, 15);
+
+  const terms = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/\s+/)
+    .filter(t => t.length > 0);
+
+  return AppState.products.filter(p => {
+    const nombreNorm = (p.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const skuNorm = (p.sku || p.codigo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const catNorm = (p.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    return terms.every(term => 
+      nombreNorm.includes(term) ||
+      skuNorm.includes(term) ||
+      catNorm.includes(term)
+    );
+  }).slice(0, 20);
+}
+
+function renderDespachoProductDropdown(products) {
+  const dropdown = document.getElementById('des-producto-dropdown');
+  if (!dropdown) return;
+
+  if (!products || products.length === 0) {
+    dropdown.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px;">No se encontraron productos.</div>`;
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  selectedDropdownIndex = -1;
+  dropdown.innerHTML = products.map((p, idx) => {
+    const precioNeto = Math.round(parseFloat(p.precio_venta) / 1.19);
+    return `
+      <div class="des-smart-item" data-id="${p.id}" data-idx="${idx}" style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s ease;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">${p.nombre}</div>
+          <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">SKU: ${p.sku || p.codigo || 'N/A'} | Stock: <span style="color: ${p.stock_actual > 0 ? '#4caf50' : '#f44336'}; font-weight: bold;">${p.stock_actual} un.</span></div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 700; color: var(--color-gold, #FFD700); font-size: 13px;">$${precioNeto.toLocaleString('es-CL')} <small style="font-size: 10px; color: var(--text-muted); font-weight: normal;">neto</small></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  dropdown.style.display = 'block';
+
+  // Eventos de clic sobre cada opción del desplegable
+  dropdown.querySelectorAll('.des-smart-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      dropdown.querySelectorAll('.des-smart-item').forEach(i => i.style.background = 'transparent');
+      item.style.background = 'rgba(229, 9, 20, 0.15)';
+    });
+    item.addEventListener('mouseleave', () => {
+      item.style.background = 'transparent';
+    });
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const pId = parseInt(item.getAttribute('data-id'));
+      selectDespachoProduct(pId);
+    });
+  });
+}
+
+function selectDespachoProduct(productId) {
+  if (!AppState.products) return;
+  const product = AppState.products.find(p => p.id === productId);
+  if (!product) return;
+
+  const searchInput = document.getElementById('des-producto-search');
+  const hiddenInput = document.getElementById('des-producto-id');
+  const selectFallback = document.getElementById('des-producto-select');
+  const clearBtn = document.getElementById('des-producto-clear');
+  const priceInput = document.getElementById('des-precio');
+  const qtyInput = document.getElementById('des-cantidad');
+  const dropdown = document.getElementById('des-producto-dropdown');
+
+  if (searchInput) searchInput.value = product.nombre;
+  if (hiddenInput) hiddenInput.value = product.id;
+  if (selectFallback) selectFallback.value = product.id;
+  if (clearBtn) clearBtn.style.display = 'block';
+  if (dropdown) dropdown.style.display = 'none';
+
+  // Autocompletar precio neto sugerido
+  const precioNeto = Math.round(parseFloat(product.precio_venta) / 1.19);
+  if (priceInput) priceInput.value = precioNeto;
+  if (qtyInput && (!qtyInput.value || qtyInput.value === '0')) qtyInput.value = 1;
+
+  if (qtyInput) qtyInput.focus();
+}
+
+// Inicializar event listeners del buscador de productos
+function setupDespachoProductSearch() {
+  const input = document.getElementById('des-producto-search');
+  const clearBtn = document.getElementById('des-producto-clear');
+  const dropdown = document.getElementById('des-producto-dropdown');
+
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    if (clearBtn) clearBtn.style.display = q.length > 0 ? 'block' : 'none';
+    if (!q) {
+      document.getElementById('des-producto-id').value = '';
+      if (dropdown) dropdown.style.display = 'none';
+      return;
+    }
+    const matches = searchDespachoProducts(q);
+    renderDespachoProductDropdown(matches);
+  });
+
+  input.addEventListener('focus', () => {
+    const q = input.value.trim();
+    const matches = searchDespachoProducts(q);
+    renderDespachoProductDropdown(matches);
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (dropdown) dropdown.style.display = 'none';
+    }, 200);
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      document.getElementById('des-producto-id').value = '';
+      document.getElementById('des-precio').value = '';
+      clearBtn.style.display = 'none';
+      if (dropdown) dropdown.style.display = 'none';
+      input.focus();
+    });
+  }
+}
+
+// Enlazar listeners al cargar el script
+document.addEventListener('DOMContentLoaded', setupDespachoProductSearch);
+setupDespachoProductSearch();
 
 // Cambiar producto actualiza el precio unitario sugerido (neto)
 function handleDespachoProductChange(e) {
@@ -183,8 +397,6 @@ function handleDespachoProductChange(e) {
 
   const product = AppState.products.find(p => p.id === prodId);
   if (product) {
-    // La guía de despacho usa valores netos. En Chile el precio de venta suele ser con IVA incluido.
-    // Redondeamos el precio neto (Precio Venta / 1.19)
     const precioNeto = Math.round(parseFloat(product.precio_venta) / 1.19);
     document.getElementById('des-precio').value = precioNeto;
   }
@@ -193,15 +405,16 @@ function handleDespachoProductChange(e) {
 // Agregar producto al listado temporal
 function addProductToDespachoCart() {
   const productSelect = document.getElementById('des-producto-select');
+  const productIdInput = document.getElementById('des-producto-id');
   const qtyInput = document.getElementById('des-cantidad');
   const priceInput = document.getElementById('des-precio');
 
-  const productId = parseInt(productSelect.value);
+  const productId = parseInt(productIdInput?.value || productSelect?.value);
   const qty = parseInt(qtyInput.value);
   const price = parseInt(priceInput.value);
 
   if (!productId) {
-    showToast('Seleccione un producto.', 'warning');
+    showToast('Seleccione un producto buscando por nombre o SKU.', 'warning');
     return;
   }
   if (!qty || qty <= 0) {
@@ -230,24 +443,30 @@ function addProductToDespachoCart() {
       return;
     }
     existing.cantidad += qty;
-    existing.subtotal = existing.cantidad * existing.precio_unitario;
+    existing.precio_unitario_neto = price;
   } else {
     DespachoCart.push({
-      producto_id: productId,
-      codigo: product.codigo,
+      producto_id: product.id,
+      codigo: product.sku || product.codigo || `PRD-${product.id}`,
       nombre: product.nombre,
       cantidad: qty,
-      precio_unitario: price,
-      subtotal: qty * price
+      precio_unitario_neto: price
     });
   }
 
-  // Limpiar campos de item
-  productSelect.value = '';
-  qtyInput.value = '1';
+  // Limpiar campos de captura de producto para el siguiente ítem
+  const searchInput = document.getElementById('des-producto-search');
+  const clearBtn = document.getElementById('des-producto-clear');
+  if (searchInput) searchInput.value = '';
+  if (productIdInput) productIdInput.value = '';
+  if (productSelect) productSelect.value = '';
+  if (clearBtn) clearBtn.style.display = 'none';
   priceInput.value = '';
+  qtyInput.value = 1;
+  if (searchInput) searchInput.focus();
 
   renderDespachoCartTable();
+  showToast(`"${product.nombre}" agregado a la guía de despacho.`, 'success');
 }
 
 // Renderizar tabla del carrito de despacho
@@ -261,22 +480,29 @@ function renderDespachoCartTable() {
     return;
   }
 
-  tbody.innerHTML = DespachoCart.map((item, idx) => `
-    <tr>
-      <td>${item.codigo}</td>
-      <td>${item.nombre}</td>
-      <td>${item.cantidad}</td>
-      <td>$${item.precio_unitario.toLocaleString('es-CL')}</td>
-      <td><strong>$${item.subtotal.toLocaleString('es-CL')}</strong></td>
-      <td>
-        <button type="button" class="btn-icon-secondary" onclick="removeProductFromDespachoCart(${idx})">
-          <span class="material-icons-round" style="font-size:16px; color:var(--color-primary);">delete</span>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = DespachoCart.map((item, idx) => {
+    const unitPrice = item.precio_unitario_neto !== undefined ? item.precio_unitario_neto : (item.precio_unitario || 0);
+    const subtotal = item.cantidad * unitPrice;
+    item.subtotal = subtotal;
+    item.precio_unitario = unitPrice;
 
-  const neto = DespachoCart.reduce((acc, val) => acc + val.subtotal, 0);
+    return `
+      <tr>
+        <td>${item.codigo}</td>
+        <td>${item.nombre}</td>
+        <td>${item.cantidad}</td>
+        <td>$${unitPrice.toLocaleString('es-CL')}</td>
+        <td><strong>$${subtotal.toLocaleString('es-CL')}</strong></td>
+        <td>
+          <button type="button" class="btn-icon-secondary" onclick="removeProductFromDespachoCart(${idx})">
+            <span class="material-icons-round" style="font-size:16px; color:var(--color-primary);">delete</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const neto = DespachoCart.reduce((acc, val) => acc + (val.subtotal || 0), 0);
   updateDespachoTotals(neto);
 }
 
