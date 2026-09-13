@@ -1651,9 +1651,10 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
       const extractField = (rowObj, candidates, fallbackVal = '') => {
         if (!rowObj || typeof rowObj !== 'object') return fallbackVal;
         for (const key of Object.keys(rowObj)) {
-          const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+          const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
           for (const cand of candidates) {
-            if (cleanKey.includes(cand.toUpperCase())) {
+            const cleanCand = cand.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (cleanKey === cleanCand || cleanKey.includes(cleanCand) || cleanCand.includes(cleanKey)) {
               const val = String(rowObj[key] || '').trim();
               if (val) return val;
             }
@@ -1662,15 +1663,15 @@ app.post('/api/despachos/generar-desde-excel', authenticateToken, async (req, re
         return fallbackVal;
       };
 
-      const nombreChofer = extractField(firstRow, ['nombre_chofer', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'Nombre Chofer', 'NOMBRE_CHOFER'], 'Chofer no especificado');
-      const rutChofer = extractField(firstRow, ['rut_chofer', 'RUT_CHOFER', 'rut_conductor', 'RUT Chofer', 'RUT_CONDUCTOR'], 'N/A');
-      const patenteVehiculo = extractField(firstRow, ['patente_vehiculo', 'PATENTE', 'VEHICULO', 'Patente'], 'N/A');
+      const nombreChofer = extractField(firstRow, ['NOMBRE_TRANSPORTISTA', 'NOMBRE_CHOFER', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'Nombre Chofer', 'NOMBRE_CONDUCTOR', 'TRANSPORTISTA'], 'Chofer no especificado');
+      const rutChofer = extractField(firstRow, ['RUT_CHOFER', 'rut_chofer', 'RUT_CONDUCTOR', 'RUT Chofer', 'RUT_TRANSPORTISTA'], 'N/A');
+      const patenteVehiculo = extractField(firstRow, ['PATENTE_VEHICULO', 'patente_vehiculo', 'PATENTE', 'VEHICULO', 'Patente'], 'N/A');
 
-      const clienteNombre = extractField(firstRow, ['cliente_nombre', 'NOMBRE_CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'Señor(es) / Cliente', 'RECEPTOR'], 'Cliente General');
-      const clienteRut = extractField(firstRow, ['cliente_rut', 'RUT_CLIENTE', 'RUT', 'RUT Cliente', 'NIT'], 'N/A');
-      const giroCliente = extractField(firstRow, ['giro', 'GIRO_CLIENTE', 'GIRO', 'Giro'], 'Comercial / Venta Bebidas');
-      const direccionDespacho = extractField(firstRow, ['direccion_despacho', 'DIRECCION_DESPACHO', 'DIRECCION', 'Dirección', 'Dirección Destino'], 'Dirección de Despacho');
-      const comunaDespacho = extractField(firstRow, ['comuna_despacho', 'COMUNA', 'Comuna', 'Comuna Destino'], 'Santiago');
+      const clienteNombre = extractField(firstRow, ['NOMBRE_CLIENTE', 'cliente_nombre', 'CLIENTE', 'RAZON_SOCIAL', 'Señor(es) / Cliente', 'RECEPTOR'], 'Cliente General');
+      const clienteRut = extractField(firstRow, ['RUT_CLIENTE', 'cliente_rut', 'RUT', 'RUT Cliente', 'NIT'], 'N/A');
+      const giroCliente = extractField(firstRow, ['GIRO_CLIENTE', 'giro', 'GIRO', 'Giro'], 'Comercial / Venta Bebidas');
+      const direccionDespacho = extractField(firstRow, ['DIRECCION_CLIENTE', 'DIRECCION CLIENTE', 'direccion_despacho', 'DIRECCION', 'Dirección', 'Dirección Destino'], 'Dirección de Despacho');
+      const comunaDespacho = extractField(firstRow, ['COMUNA_CLIENTE', 'COMUNA CLIENTE', 'comuna_despacho', 'COMUNA', 'Comuna', 'Comuna Destino'], 'Santiago');
       const itemVendedor = extractField(firstRow, ['vendedor', 'NOMBRE_VENDEDOR', 'VENDEDOR', 'Vendedor', 'CODIGO_VENDEDOR'], 'Vendedor Central');
 
       const gdInsertRes = await db.query(

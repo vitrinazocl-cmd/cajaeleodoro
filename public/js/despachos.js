@@ -780,9 +780,10 @@ function processExcelRows(rows, matrix = []) {
   const getValFromRows = (candidates) => {
     for (const row of rows) {
       for (const key of Object.keys(row)) {
-        const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         for (const cand of candidates) {
-          if (cleanKey.includes(cand.toUpperCase())) {
+          const cleanCand = cand.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (cleanKey === cleanCand || cleanKey.includes(cleanCand) || cleanCand.includes(cleanKey)) {
             const val = String(row[key] || '').trim();
             if (val) return val;
           }
@@ -792,19 +793,19 @@ function processExcelRows(rows, matrix = []) {
     return '';
   };
 
-  if (!extractedDriverName) extractedDriverName = getValFromRows(['NOMBRE_CHOFER', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'TRANSPORTE_CHOFER']);
-  if (!extractedDriverRut) extractedDriverRut = getValFromRows(['RUT_CHOFER', 'RUT_CONDUCTOR', 'RUT_DRIVER', 'CHOFER_RUT']);
+  if (!extractedDriverName) extractedDriverName = getValFromRows(['NOMBRE_TRANSPORTISTA', 'NOMBRE_CHOFER', 'NOMBRE_CONDUCTOR', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'TRANSPORTISTA', 'CHOFER_NOMBRE']);
+  if (!extractedDriverRut) extractedDriverRut = getValFromRows(['RUT_CHOFER', 'RUT_CONDUCTOR', 'RUT_DRIVER', 'CHOFER_RUT', 'RUT_TRANSPORTISTA']);
   if (!extractedDriverPatente) extractedDriverPatente = getValFromRows(['PATENTE_VEHICULO', 'PATENTE', 'VEHICULO', 'CAMION']);
-  if (!extractedDriverTransp) extractedDriverTransp = getValFromRows(['TRANSPORTISTA', 'EMPRESA_TRANSPORTE', 'TRANSPORTE']);
+  if (!extractedDriverTransp) extractedDriverTransp = getValFromRows(['NOMBRE_TRANSPORTISTA', 'TRANSPORTISTA', 'EMPRESA_TRANSPORTE', 'TRANSPORTE']);
 
-  if (!extractedClientName) extractedClientName = getValFromRows(['NOMBRE_CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'RECEPTOR', 'COMPRADOR']);
-  if (!extractedClientRut) extractedClientRut = getValFromRows(['RUT_CLIENTE', 'RUT', 'NIT', 'IDENTIFICACION', 'RECEPTOR_RUT']);
+  if (!extractedClientName) extractedClientName = getValFromRows(['NOMBRE_CLIENTE', 'NOMBRE CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'RECEPTOR', 'COMPRADOR']);
+  if (!extractedClientRut) extractedClientRut = getValFromRows(['RUT_CLIENTE', 'RUT CLIENTE', 'RUT', 'NIT', 'IDENTIFICACION', 'RECEPTOR_RUT']);
   if (!extractedClientGiro) extractedClientGiro = getValFromRows(['GIRO_CLIENTE', 'GIRO', 'RUBRO', 'ACTIVIDAD']);
-  if (!extractedClientDireccion) extractedClientDireccion = getValFromRows(['DIRECCION_DESPACHO', 'DIRECCION', 'DESTINO', 'DOMICILIO']);
-  if (!extractedClientComuna) extractedClientComuna = getValFromRows(['COMUNA', 'CIUDAD', 'LOCALIDAD']);
+  if (!extractedClientDireccion) extractedClientDireccion = getValFromRows(['DIRECCION_CLIENTE', 'DIRECCION CLIENTE', 'DIRECCION_DESPACHO', 'DIRECCION', 'DESTINO', 'DOMICILIO']);
+  if (!extractedClientComuna) extractedClientComuna = getValFromRows(['COMUNA_CLIENTE', 'COMUNA CLIENTE', 'COMUNA_DESPACHO', 'COMUNA', 'CIUDAD', 'LOCALIDAD']);
 
   if (!extractedSellerName) extractedSellerName = getValFromRows(['NOMBRE_VENDEDOR', 'VENDEDOR', 'CODIGO_VENDEDOR', 'EJECUTIVO']);
-  if (!extractedSellerMetodo) extractedSellerMetodo = getValFromRows(['METODO_PAGO', 'FORMA_PAGO', 'PAGO']);
+  if (!extractedSellerMetodo) extractedSellerMetodo = getValFromRows(['METODO_DE_PAGO', 'METODO DE PAGO', 'METODO_PAGO', 'FORMA_PAGO', 'PAGO']);
   if (!extractedSellerTraslado) extractedSellerTraslado = getValFromRows(['TIPO_TRASLADO', 'TRASLADO', 'MOTIVO']);
 
   const client = {
