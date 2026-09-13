@@ -681,103 +681,9 @@ function processExcelRows(rows, matrix = []) {
   let extractedSellerMetodo = '';
   let extractedSellerTraslado = '';
 
-  // 1. ESCANEO MATRICIAL DE CELDAS CRUDAS (Para capturar encabezados clave:valor tipo "Chofer: Nombre")
-  if (matrix && matrix.length > 0) {
-    for (let r = 0; r < matrix.length; r++) {
-      const rowArr = matrix[r];
-      if (!Array.isArray(rowArr)) continue;
-      for (let c = 0; c < rowArr.length; c++) {
-        const cellStr = String(rowArr[c] || '').trim();
-        if (!cellStr) continue;
-
-        const cellUpper = cellStr.toUpperCase();
-        const nextCell = String(rowArr[c + 1] || '').trim();
-
-        // BUSCAR CHOFER / CONDUCTOR
-        if (/CHOFER|CONDUCTOR|DRIVER/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedDriverName) extractedDriverName = val;
-          } else if (nextCell && !extractedDriverName && !/CHOFER|CONDUCTOR|DRIVER/i.test(nextCell)) {
-            extractedDriverName = nextCell;
-          }
-        }
-
-        // BUSCAR RUT CHOFER
-        if (/RUT.*CHOFER|RUT.*CONDUCTOR|RUT.*DRIVER/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedDriverRut) extractedDriverRut = val;
-          } else if (nextCell && !extractedDriverRut) {
-            extractedDriverRut = nextCell;
-          }
-        }
-
-        // BUSCAR PATENTE
-        if (/PATENTE|VEHICULO|CAMION/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedDriverPatente) extractedDriverPatente = val;
-          } else if (nextCell && !extractedDriverPatente) {
-            extractedDriverPatente = nextCell;
-          }
-        }
-
-        // BUSCAR CLIENTE / RECEPTOR
-        if (/CLIENTE|RECEPTOR|RAZON.*SOCIAL|SEÑOR/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedClientName) extractedClientName = val;
-          } else if (nextCell && !extractedClientName && !/CLIENTE|RECEPTOR/i.test(nextCell)) {
-            extractedClientName = nextCell;
-          }
-        }
-
-        // BUSCAR RUT CLIENTE
-        if (/RUT.*CLIENTE|RUT.*RECEPTOR|^RUT$/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedClientRut) extractedClientRut = val;
-          } else if (nextCell && !extractedClientRut) {
-            extractedClientRut = nextCell;
-          }
-        }
-
-        // BUSCAR VENDEDOR
-        if (/VENDEDOR|CODIGO.*VENDEDOR|EJECUTIVO/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedSellerName) extractedSellerName = val;
-          } else if (nextCell && !extractedSellerName && !/VENDEDOR/i.test(nextCell)) {
-            extractedSellerName = nextCell;
-          }
-        }
-
-        // BUSCAR DIRECCION DESPACHO
-        if (/DIRECCION|DESTINO|DOMICILIO/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedClientDireccion) extractedClientDireccion = val;
-          } else if (nextCell && !extractedClientDireccion) {
-            extractedClientDireccion = nextCell;
-          }
-        }
-
-        // BUSCAR COMUNA
-        if (/COMUNA|CIUDAD|LOCALIDAD/i.test(cellUpper)) {
-          if (cellStr.includes(':')) {
-            const val = cellStr.split(':')[1].trim();
-            if (val && !extractedClientComuna) extractedClientComuna = val;
-          } else if (nextCell && !extractedClientComuna) {
-            extractedClientComuna = nextCell;
-          }
-        }
-      }
-    }
-  }
-
-  // 2. ESCANEO POR COLUMNAS DE OBJETOS (Recorrer todas las filas de la tabla de datos)
+  // 1. ESCANEO POR COLUMNAS DE OBJETOS (Prioridad Máxima: Recorrer filas de la tabla con encabezados)
   const getValFromRows = (candidates) => {
+    if (!rows || rows.length === 0) return '';
     for (const row of rows) {
       for (const key of Object.keys(row)) {
         const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -793,20 +699,45 @@ function processExcelRows(rows, matrix = []) {
     return '';
   };
 
-  if (!extractedDriverName) extractedDriverName = getValFromRows(['NOMBRE_TRANSPORTISTA', 'NOMBRE_CHOFER', 'NOMBRE_CONDUCTOR', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'TRANSPORTISTA', 'CHOFER_NOMBRE']);
-  if (!extractedDriverRut) extractedDriverRut = getValFromRows(['RUT_CHOFER', 'RUT_CONDUCTOR', 'RUT_DRIVER', 'CHOFER_RUT', 'RUT_TRANSPORTISTA']);
-  if (!extractedDriverPatente) extractedDriverPatente = getValFromRows(['PATENTE_VEHICULO', 'PATENTE', 'VEHICULO', 'CAMION']);
-  if (!extractedDriverTransp) extractedDriverTransp = getValFromRows(['NOMBRE_TRANSPORTISTA', 'TRANSPORTISTA', 'EMPRESA_TRANSPORTE', 'TRANSPORTE']);
+  extractedDriverName = getValFromRows(['NOMBRE_TRANSPORTISTA', 'NOMBRE_CHOFER', 'NOMBRE_CONDUCTOR', 'CHOFER', 'CONDUCTOR', 'DRIVER', 'TRANSPORTISTA', 'CHOFER_NOMBRE']);
+  extractedDriverRut = getValFromRows(['RUT_CHOFER', 'RUT_CONDUCTOR', 'RUT_DRIVER', 'CHOFER_RUT', 'RUT_TRANSPORTISTA']);
+  extractedDriverPatente = getValFromRows(['PATENTE_VEHICULO', 'PATENTE', 'VEHICULO', 'CAMION']);
+  extractedDriverTransp = getValFromRows(['NOMBRE_TRANSPORTISTA', 'TRANSPORTISTA', 'EMPRESA_TRANSPORTE', 'TRANSPORTE']);
 
-  if (!extractedClientName) extractedClientName = getValFromRows(['NOMBRE_CLIENTE', 'NOMBRE CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'RECEPTOR', 'COMPRADOR']);
-  if (!extractedClientRut) extractedClientRut = getValFromRows(['RUT_CLIENTE', 'RUT CLIENTE', 'RUT', 'NIT', 'IDENTIFICACION', 'RECEPTOR_RUT']);
-  if (!extractedClientGiro) extractedClientGiro = getValFromRows(['GIRO_CLIENTE', 'GIRO', 'RUBRO', 'ACTIVIDAD']);
-  if (!extractedClientDireccion) extractedClientDireccion = getValFromRows(['DIRECCION_CLIENTE', 'DIRECCION CLIENTE', 'DIRECCION_DESPACHO', 'DIRECCION', 'DESTINO', 'DOMICILIO']);
-  if (!extractedClientComuna) extractedClientComuna = getValFromRows(['COMUNA_CLIENTE', 'COMUNA CLIENTE', 'COMUNA_DESPACHO', 'COMUNA', 'CIUDAD', 'LOCALIDAD']);
+  extractedClientName = getValFromRows(['NOMBRE_CLIENTE', 'NOMBRE CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'RECEPTOR', 'COMPRADOR']);
+  extractedClientRut = getValFromRows(['RUT_CLIENTE', 'RUT CLIENTE', 'RUT', 'NIT', 'IDENTIFICACION', 'RECEPTOR_RUT']);
+  extractedClientGiro = getValFromRows(['GIRO_CLIENTE', 'GIRO', 'RUBRO', 'ACTIVIDAD']);
+  extractedClientDireccion = getValFromRows(['DIRECCION_CLIENTE', 'DIRECCION CLIENTE', 'DIRECCION_DESPACHO', 'DIRECCION', 'DESTINO', 'DOMICILIO']);
+  extractedClientComuna = getValFromRows(['COMUNA_CLIENTE', 'COMUNA CLIENTE', 'COMUNA_DESPACHO', 'COMUNA', 'CIUDAD', 'LOCALIDAD']);
 
-  if (!extractedSellerName) extractedSellerName = getValFromRows(['NOMBRE_VENDEDOR', 'VENDEDOR', 'CODIGO_VENDEDOR', 'EJECUTIVO']);
-  if (!extractedSellerMetodo) extractedSellerMetodo = getValFromRows(['METODO_DE_PAGO', 'METODO DE PAGO', 'METODO_PAGO', 'FORMA_PAGO', 'PAGO']);
-  if (!extractedSellerTraslado) extractedSellerTraslado = getValFromRows(['TIPO_TRASLADO', 'TRASLADO', 'MOTIVO']);
+  extractedSellerName = getValFromRows(['NOMBRE_VENDEDOR', 'VENDEDOR', 'CODIGO_VENDEDOR', 'EJECUTIVO']);
+  extractedSellerMetodo = getValFromRows(['METODO_DE_PAGO', 'METODO DE PAGO', 'METODO_PAGO', 'FORMA_PAGO', 'PAGO']);
+  extractedSellerTraslado = getValFromRows(['TIPO_TRASLADO', 'TRASLADO', 'MOTIVO']);
+
+  // 2. ESCANEO MATRICIAL DE CELDAS CRUDAS (Solo si no se encontró en la tabla, para bloques clave:valor "Chofer: Juan")
+  if (matrix && matrix.length > 0) {
+    for (let r = 0; r < matrix.length; r++) {
+      const rowArr = matrix[r];
+      if (!Array.isArray(rowArr)) continue;
+      for (let c = 0; c < rowArr.length; c++) {
+        const cellStr = String(rowArr[c] || '').trim();
+        if (!cellStr || !cellStr.includes(':')) continue;
+
+        const cellUpper = cellStr.toUpperCase();
+        const val = cellStr.split(':')[1].trim();
+        if (!val) continue;
+
+        if (/CHOFER|CONDUCTOR|DRIVER/i.test(cellUpper) && !extractedDriverName) extractedDriverName = val;
+        if (/RUT.*CHOFER|RUT.*CONDUCTOR/i.test(cellUpper) && !extractedDriverRut) extractedDriverRut = val;
+        if (/PATENTE|VEHICULO/i.test(cellUpper) && !extractedDriverPatente) extractedDriverPatente = val;
+        if (/CLIENTE|RECEPTOR/i.test(cellUpper) && !extractedClientName) extractedClientName = val;
+        if (/RUT.*CLIENTE/i.test(cellUpper) && !extractedClientRut) extractedClientRut = val;
+        if (/VENDEDOR/i.test(cellUpper) && !extractedSellerName) extractedSellerName = val;
+        if (/DIRECCION/i.test(cellUpper) && !extractedClientDireccion) extractedClientDireccion = val;
+        if (/COMUNA|CIUDAD/i.test(cellUpper) && !extractedClientComuna) extractedClientComuna = val;
+      }
+    }
+  }
 
   const client = {
     nombre: extractedClientName || 'Cliente General',
