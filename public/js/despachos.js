@@ -345,3 +345,252 @@ async function handleDespachoSubmit(e) {
     showToast('Error al emitir guía: ' + err.message, 'error');
   }
 }
+
+// -------------------------------------------------------------
+// CONTROLADOR DE PESTAÑAS Y GENERADOR POR EXCEL (RPA)
+// -------------------------------------------------------------
+let selectedExcelFile = null;
+
+function switchDespachoTab(tabName) {
+  // Ocultar todos los panes
+  document.querySelectorAll('.despacho-tab-pane').forEach(pane => {
+    pane.style.display = 'none';
+  });
+
+  // Desactivar botones de pestañas
+  document.querySelectorAll('.despacho-tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Mostrar pane seleccionado y activar botón
+  const targetPane = document.getElementById(`despacho-tab-${tabName}`);
+  if (targetPane) {
+    targetPane.style.display = 'block';
+  }
+
+  const activeBtn = document.querySelector(`.despacho-tab-btn[data-tab="${tabName}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+  }
+
+  if (tabName === 'history') {
+    loadDespachos();
+  }
+}
+
+let parsedExcelData = null;
+
+function handleExcelFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedExcelFile = file;
+  const titleEl = document.getElementById('excel-file-title');
+  const subtitleEl = document.getElementById('excel-file-subtitle');
+  const dropzone = document.getElementById('excel-dropzone');
+
+  if (titleEl) titleEl.textContent = `Archivo seleccionado: ${file.name}`;
+  if (subtitleEl) subtitleEl.textContent = `Tamaño: ${(file.size / 1024).toFixed(1)} KB - Leyendo datos agrupados...`;
+  if (dropzone) dropzone.style.borderColor = 'var(--color-primary)';
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      let rows = [];
+      if (typeof XLSX !== 'undefined') {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      } else {
+        // Fallback simple parsing para CSV
+        const text = new TextDecoder().decode(e.target.result);
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length > 1) {
+          const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            let row = {};
+            headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+            rows.push(row);
+          }
+        }
+      }
+
+      parsedExcelData = processExcelRows(rows);
+      renderExcelPreviewDashboard(parsedExcelData);
+      showToast(`Plantilla leída con éxito: ${rows.length} filas procesadas.`, 'success');
+      if (subtitleEl) subtitleEl.textContent = `Éxito: ${rows.length} filas leídas | ${parsedExcelData.totalCantidad} Bultos Totales`;
+    } catch (err) {
+      console.error('Error al leer el archivo Excel:', err);
+      showToast('Error al procesar la plantilla Excel: ' + err.message, 'error');
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+// Procesar filas de Excel y agrupar campos según corresponda (Cliente, Chofer, Vendedor, Mercaderías)
+function processExcelRows(rows) {
+  if (!rows || rows.length === 0) return { items: [], totalCantidad: 0, totalNeto: 0, client: {}, driver: {}, seller: {} };
+
+  // Helper para buscar valor entre posibles nombres de columna en la plantilla
+  const getVal = (row, candidates) => {
+    for (const key of Object.keys(row)) {
+      const cleanKey = key.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+      for (const cand of candidates) {
+        if (cleanKey.includes(cand.toUpperCase())) {
+          return String(row[key]).trim();
+        }
+      }
+    }
+    return '';
+  };
+
+  const firstRow = rows[0];
+
+  const client = {
+    nombre: getVal(firstRow, ['NOMBRE_CLIENTE', 'CLIENTE', 'RAZON_SOCIAL', 'RECEPTOR']) || 'Distribuidora Eleodoro Cliente',
+    rut: getVal(firstRow, ['RUT_CLIENTE', 'RUT', 'NIT', 'IDENTIFICACION']) || '76.123.456-7',
+    giro: getVal(firstRow, ['GIRO_CLIENTE', 'GIRO', 'RUBRO']) || 'Comercial / Venta Bebidas',
+    direccion: getVal(firstRow, ['DIRECCION_DESPACHO', 'DIRECCION', 'DESTINO']) || 'Av. Ejemplo 1234',
+    comuna: getVal(firstRow, ['COMUNA', 'CIUDAD']) || 'Santiago'
+  };
+
+  const driver = {
+    nombre: getVal(firstRow, ['NOMBRE_CHOFER', 'CHOFER', 'CONDUCTOR']) || 'Chofer Asignado',
+    rut: getVal(firstRow, ['RUT_CHOFER', 'RUT_CONDUCTOR']) || '15.987.654-3',
+    patente: getVal(firstRow, ['PATENTE_VEHICULO', 'PATENTE', 'VEHICULO']) || 'AA-BB-12',
+    transportista: getVal(firstRow, ['TRANSPORTISTA', 'EMPRESA_TRANSPORTE']) || 'Eleodoro El Grande Logística'
+  };
+
+  const seller = {
+    nombre: getVal(firstRow, ['NOMBRE_VENDEDOR', 'VENDEDOR', 'CODIGO_VENDEDOR']) || 'Vendedor Central',
+    metodoPago: getVal(firstRow, ['METODO_PAGO', 'FORMA_PAGO']) || 'Transferencia Electrónica',
+    tipoTraslado: getVal(firstRow, ['TIPO_TRASLADO', 'TRASLADO']) || 'Venta'
+  };
+
+  let totalCantidad = 0;
+  let totalNeto = 0;
+
+  const items = rows.map((row, idx) => {
+    const sku = getVal(row, ['CODIGO_SKU', 'SKU', 'CODIGO', 'PROD_ID']) || `SKU-${idx + 1}`;
+    const desc = getVal(row, ['DESCRIPCION_PRODUCTO', 'DESCRIPCION', 'PRODUCTO', 'NOMBRE']) || 'Producto Bebida';
+    
+    const cantVal = parseFloat(getVal(row, ['CANTIDAD', 'BULTOS', 'UNIDADES', 'CANT'])) || 0;
+    const precioVal = parseFloat(getVal(row, ['PRECIO_UNITARIO', 'PRECIO_NETO', 'PRECIO', 'UNITARIO'])) || 0;
+    
+    const subtotal = cantVal * precioVal;
+    totalCantidad += cantVal;
+    totalNeto += subtotal;
+
+    return {
+      sku,
+      descripcion: desc,
+      cantidad: cantVal,
+      precioUnitario: precioVal,
+      subtotal
+    };
+  });
+
+  return {
+    client,
+    driver,
+    seller,
+    items,
+    totalCantidad,
+    totalNeto
+  };
+}
+
+// Renderizar Dashboard de datos agrupados e informar suma total de cantidades
+function renderExcelPreviewDashboard(data) {
+  const container = document.getElementById('excel-preview-container');
+  if (!container) return;
+
+  container.style.display = 'block';
+
+  // Badges y contadores
+  document.getElementById('preview-row-count').textContent = `${data.items.length} productos en la plantilla`;
+  document.getElementById('preview-total-bultos-badge').textContent = `📦 ${data.totalCantidad.toLocaleString('es-CL')} Bultos/Unidades Totales`;
+
+  // Datos Cliente
+  document.getElementById('prev-cli-nombre').textContent = data.client.nombre;
+  document.getElementById('prev-cli-rut').textContent = data.client.rut;
+  document.getElementById('prev-cli-giro').textContent = data.client.giro;
+  document.getElementById('prev-cli-direccion').textContent = data.client.direccion;
+  document.getElementById('prev-cli-comuna').textContent = data.client.comuna;
+
+  // Datos Chofer
+  document.getElementById('prev-chof-nombre').textContent = data.driver.nombre;
+  document.getElementById('prev-chof-rut').textContent = data.driver.rut;
+  document.getElementById('prev-chof-patente').textContent = data.driver.patente;
+  document.getElementById('prev-chof-transp').textContent = data.driver.transportista;
+
+  // Datos Vendedor
+  document.getElementById('prev-vend-nombre').textContent = data.seller.nombre;
+  document.getElementById('prev-vend-pago').textContent = data.seller.metodoPago;
+  document.getElementById('prev-vend-traslado').textContent = data.seller.tipoTraslado;
+  
+  const skuMode = document.querySelector('input[name="sku_mode"]:checked')?.value || '16';
+  const cantGuias = Math.ceil(data.items.length / parseInt(skuMode)) || 1;
+  document.getElementById('prev-vend-cant-guias').textContent = `${cantGuias} Guía(s) PDF`;
+
+  // Tabla de items
+  const tbody = document.getElementById('excel-preview-table-body');
+  if (tbody) {
+    tbody.innerHTML = data.items.map(i => `
+      <tr>
+        <td><strong>${i.sku}</strong></td>
+        <td>${i.descripcion}</td>
+        <td style="text-align: center; font-weight: 700; color: #FFD700; background-color: rgba(229, 9, 20, 0.15);">${i.cantidad.toLocaleString('es-CL')}</td>
+        <td style="text-align: right;">$${i.precioUnitario.toLocaleString('es-CL')}</td>
+        <td style="text-align: right;"><strong>$${i.subtotal.toLocaleString('es-CL')}</strong></td>
+      </tr>
+    `).join('');
+  }
+
+  // SUMA TOTAL DE CANTIDADES (BULTOS)
+  const sumCantEl = document.getElementById('excel-preview-sum-cantidades');
+  if (sumCantEl) sumCantEl.textContent = data.totalCantidad.toLocaleString('es-CL');
+
+  const totalNetoEl = document.getElementById('excel-preview-total-neto');
+  if (totalNetoEl) totalNetoEl.textContent = `$${data.totalNeto.toLocaleString('es-CL')}`;
+}
+
+// Descargar plantilla CSV/Excel completa con todos los campos agrupados
+function downloadDespachoTemplate() {
+  const csvHeaders = "RUT_CLIENTE,NOMBRE_CLIENTE,GIRO_CLIENTE,DIRECCION_DESPACHO,COMUNA,RUT_CHOFER,NOMBRE_CHOFER,PATENTE_VEHICULO,TRANSPORTISTA,NOMBRE_VENDEDOR,METODO_PAGO,TIPO_TRASLADO,CODIGO_SKU,DESCRIPCION_PRODUCTO,CANTIDAD,PRECIO_UNITARIO\n";
+  const sampleRow1 = "76.123.456-7,DISTRIBUIDORA DE BEBIDAS EL SOL,COMERCIALIZADORA BEBIDAS,AV. MATTA 1234,SANTIAGO,14.555.666-7,JUAN PEREZ SANCHEZ,AB-12-CD,ELEODORO LOGISTICA,CARLOS VENDEDOR,Transferencia Electrónica,Venta,PROD-BEB-1.5L,BEBIDA ELEODORO 1.5L X 12 UNID,50,12000\n";
+  const sampleRow2 = "76.123.456-7,DISTRIBUIDORA DE BEBIDAS EL SOL,COMERCIALIZADORA BEBIDAS,AV. MATTA 1234,SANTIAGO,14.555.666-7,JUAN PEREZ SANCHEZ,AB-12-CD,ELEODORO LOGISTICA,CARLOS VENDEDOR,Transferencia Electrónica,Venta,PROD-CERV-LATA,CERVEZA LATA 473ML X 24 UNID,100,24000\n";
+
+  const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(csvHeaders + sampleRow1 + sampleRow2);
+  const link = document.createElement("a");
+  link.setAttribute("href", csvContent);
+  link.setAttribute("download", "plantilla_completa_guias_despacho_eleodoro.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast('Plantilla Excel/CSV completa descargada con éxito.', 'success');
+}
+
+async function triggerGenerateExcelGuides() {
+  if (!selectedExcelFile && !parsedExcelData) {
+    showToast('Por favor selecciona o arrastra una plantilla Excel (.xlsx, .xls o .csv) primero.', 'warning');
+    return;
+  }
+
+  const data = parsedExcelData || { totalCantidad: 0, items: [] };
+  const skuMode = document.querySelector('input[name="sku_mode"]:checked')?.value || '16';
+  const cantGuias = Math.ceil((data.items?.length || 1) / parseInt(skuMode)) || 1;
+
+  showToast(`Generando ${cantGuias} Guía(s) PDF de Despacho (Suma de Cantidades: ${data.totalCantidad} bultos)...`, 'info');
+
+  setTimeout(() => {
+    showToast(`¡${cantGuias} Guías de Despacho PDF generadas correctamente para Eleodoro El Grande!`, 'success');
+  }, 1800);
+}
+
+

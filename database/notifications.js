@@ -324,12 +324,12 @@ function generateDespachoPDF(despacho, items, clientInfo) {
       doc.rect(310, infoY, 260, 110).lineWidth(0.5).stroke('#cccccc');
       doc.font('Helvetica-Bold').fontSize(8.5).text('DATOS DEL TRASLADO Y DESPACHO', 320, infoY + 8);
       doc.font('Helvetica').fontSize(8);
-      doc.text(`Fecha Emisión: ${new Date(despacho.fecha_emision).toLocaleDateString('es-CL')}`, 320, infoY + 22);
-      doc.text(`Fecha Traslado: ${new Date(despacho.fecha_traslado).toLocaleDateString('es-CL')}`, 320, infoY + 34);
-      doc.text(`Tipo Traslado: ${despacho.tipo_traslado || 'Venta'}`, 320, infoY + 46);
-      doc.text(`Chofer: ${despacho.nombre_chofer || 'N/A'}`, 320, infoY + 58, { width: 240 });
-      doc.text(`RUT Chofer: ${despacho.rut_chofer || 'N/A'}`, 320, infoY + 77);
-      doc.text(`Patente Vehículo: ${despacho.patente_vehiculo || 'N/A'}`, 320, infoY + 89);
+      doc.text(`Fecha Emisión: ${new Date(despacho.fecha_emision).toLocaleDateString('es-CL')}`, 320, infoY + 20);
+      doc.text(`Tipo Traslado: ${despacho.tipo_traslado || 'Venta'}`, 320, infoY + 32);
+      doc.text(`Chofer: ${despacho.nombre_chofer || 'N/A'} (RUT: ${despacho.rut_chofer || 'N/A'})`, 320, infoY + 44, { width: 240 });
+      doc.text(`Patente Vehículo: ${despacho.patente_vehiculo || 'N/A'}`, 320, infoY + 62);
+      doc.text(`Vendedor: ${despacho.vendedor || 'Vendedor Central'}`, 320, infoY + 74);
+      doc.text(`Forma Pago: ${despacho.metodo_pago || 'Transferencia Electrónica'}`, 320, infoY + 86);
 
       doc.moveDown(3);
 
@@ -345,6 +345,7 @@ function generateDespachoPDF(despacho, items, clientInfo) {
 
       doc.fillColor('#000000').font('Helvetica');
       let itemY = tableY + 20;
+      let totalCantidadBultos = 0;
 
       items.forEach((item, index) => {
         if (index % 2 === 1) {
@@ -352,20 +353,30 @@ function generateDespachoPDF(despacho, items, clientInfo) {
           doc.fillColor('#000000');
         }
         
+        const cantVal = parseFloat(item.cantidad) || 0;
+        totalCantidadBultos += cantVal;
+
         doc.text(item.codigo || `P-${item.producto_id}`, 45, itemY + 5);
         doc.text(item.nombre || item.producto_nombre || 'Producto', 120, itemY + 5, { width: 250, ellipsis: true });
-        doc.text(String(item.cantidad), 380, itemY + 5, { width: 50, align: 'center' });
+        doc.text(String(cantVal), 380, itemY + 5, { width: 50, align: 'center' });
         doc.text(fmtCLP(item.precio_unitario), 440, itemY + 5, { width: 50, align: 'right' });
         doc.text(fmtCLP(item.subtotal), 500, itemY + 5, { width: 60, align: 'right' });
         
         itemY += 18;
       });
 
+      // Fila Destacada: SUMA TOTAL DE CANTIDADES
+      doc.rect(40, itemY, 530, 20).fill('#e6ecf5');
+      doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8.5);
+      doc.text('SUMA TOTAL DE CANTIDADES (BULTOS):', 45, itemY + 5);
+      doc.fillColor('#E50914').text(`${totalCantidadBultos.toLocaleString('es-CL')} UNIDADES`, 350, itemY + 5, { width: 100, align: 'center' });
+      
+      itemY += 20;
       doc.rect(40, itemY, 530, 0.5).stroke('#cccccc');
 
       // --- 5. RESUMEN DE TOTALES ---
       const totalsY = itemY + 15;
-      doc.font('Helvetica-Bold').fontSize(9);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#000000');
       doc.text('NETO:', 420, totalsY, { width: 70, align: 'left' });
       doc.text(fmtCLP(despacho.subtotal), 500, totalsY, { width: 70, align: 'right' });
 
